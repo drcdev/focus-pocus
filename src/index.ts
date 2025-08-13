@@ -76,6 +76,13 @@ class OmniFocusMCPServer {
   }
 
   async start() {
+    // Initialize OmniFocus connection
+    const connected = await this.client.initialize();
+    if (!connected) {
+      console.error('Warning: Could not establish initial connection to OmniFocus');
+      console.error('Server will still start, but tools may fail until connection is established');
+    }
+
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     console.error('OmniFocus MCP server started');

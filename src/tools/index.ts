@@ -368,10 +368,14 @@ export class MCPToolRegistry {
       // Read/Query Tools
       {
         name: 'get_all_tasks',
-        description: 'Get all tasks from OmniFocus',
+        description: 'Get all tasks from OmniFocus with pagination support',
         inputSchema: {
           type: 'object',
-          properties: {},
+          properties: {
+            limit: { type: 'number', description: 'Maximum number of tasks to return (default: 25)' },
+            offset: { type: 'number', description: 'Number of tasks to skip (default: 0)' },
+            includeCompleted: { type: 'boolean', description: 'Include completed tasks (default: false)' }
+          },
           additionalProperties: false
         }
       },
@@ -624,7 +628,7 @@ export class MCPToolRegistry {
 
         // Read/Query Operations
         case 'get_all_tasks':
-          return await this.client.getAllTasks();
+          return await this.client.getAllTasks(args);
         case 'get_task_by_id':
           return await this.client.getTaskById(args.taskId);
         case 'search_tasks':

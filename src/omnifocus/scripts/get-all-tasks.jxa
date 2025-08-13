@@ -9,67 +9,83 @@
       throw new Error('OmniFocus is not running');
     }
     
+    // Parse parameters with defaults for pagination
+    const limit = {{limit}} || 25; // Default to 25 tasks per request for performance
+    const offset = {{offset}} || 0;
+    const includeCompleted = {{includeCompleted}} !== undefined ? {{includeCompleted}} : false;
+    
     const doc = app.defaultDocument;
     const flattenedTasks = doc.flattenedTasks;
     
     const tasks = [];
+    let processedCount = 0;
+    let addedCount = 0;
     
-    for (let i = 0; i < flattenedTasks.length; i++) {
+    for (let i = 0; i < flattenedTasks.length && addedCount < limit; i++) {
       const task = flattenedTasks[i];
       
       try {
+        // Skip completed tasks if not requested
+        if (!includeCompleted && task.completed()) {
+          continue;
+        }
+        
+        // Apply offset
+        if (processedCount < offset) {
+          processedCount++;
+          continue;
+        }
+        
+        // Build minimal task data for performance - only essential fields
         const taskData = {
           id: task.id(),
           name: task.name(),
-          note: task.note() || null,
           completed: task.completed(),
-          completionDate: task.completionDate() ? task.completionDate().toISOString() : null,
-          creationDate: task.creationDate().toISOString(),
-          modificationDate: task.modificationDate().toISOString(),
-          dueDate: task.dueDate() ? task.dueDate().toISOString() : null,
-          deferDate: task.deferDate() ? task.deferDate().toISOString() : null,
-          estimatedMinutes: task.estimatedMinutes() || null,
-          flagged: task.flagged(),
-          repetitionRule: task.repetitionRule() ? task.repetitionRule().toString() : null,
-          tags: [],
-          projectId: null,
-          parentTaskId: null,
-          containingProjectInfo: null
+          flagged: task.flagged()
         };
         
-        // Get tags
-        const taskTags = task.tags();
-        if (taskTags && taskTags.length > 0) {
-          for (let j = 0; j < taskTags.length; j++) {
-            taskData.tags.push(taskTags[j].name());
-          }
+        // Only add optional fields if they exist (reduce JXA calls)
+        const dueDate = task.dueDate();
+        if (dueDate) {
+          taskData.dueDate = dueDate.toISOString();
         }
         
-        // Get containing project
+        const deferDate = task.deferDate();
+        if (deferDate) {
+          taskData.deferDate = deferDate.toISOString();
+        }
+        
+        const estimatedMinutes = task.estimatedMinutes();
+        if (estimatedMinutes) {
+          taskData.estimatedMinutes = estimatedMinutes;
+        }
+        
+        // Get project ID only if task has a containing project
         const containingProject = task.containingProject();
         if (containingProject) {
           taskData.projectId = containingProject.id();
-          taskData.containingProjectInfo = {
-            id: containingProject.id(),
-            name: containingProject.name(),
-            status: containingProject.status()
-          };
-        }
-        
-        // Get parent task
-        const parentTask = task.parentTask();
-        if (parentTask) {
-          taskData.parentTaskId = parentTask.id();
         }
         
         tasks.push(taskData);
+        processedCount++;
+        addedCount++;
+        
       } catch (taskError) {
         // Skip individual task errors but continue processing
-        console.log('Error processing task:', taskError.message);
+        continue;
       }
     }
     
-    return JSON.stringify(tasks);
+    return JSON.stringify({
+      tasks: tasks,
+      pagination: {
+        total: flattenedTasks.length,
+        offset: offset,
+        limit: limit,
+        returned: tasks.length,
+        hasMore: (offset + tasks.length) < flattenedTasks.length
+      }
+    });
     
   } catch (error) {
     return JSON.stringify({

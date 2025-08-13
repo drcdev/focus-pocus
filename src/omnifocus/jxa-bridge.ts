@@ -15,7 +15,7 @@ export interface JXAResponse<T = any> {
 }
 
 class JXABridge {
-  private static readonly TIMEOUT_MS = 10000;
+  private static readonly TIMEOUT_MS = 45000; // Increased to 45 seconds for JXA processing
   private static readonly MAX_RETRIES = 3;
 
   static async execJXA<T = any>(
@@ -68,17 +68,32 @@ class JXABridge {
     params: Record<string, any> = {}
   ): Promise<JXAResponse<T>> {
     try {
-      const scriptPath = this.getScriptPath(scriptName);
+      const script = await this.loadScript(scriptName);
       
-      // For now, execute script files directly without parameter injection
-      // TODO: Add parameter support if needed
-      const result = execSync(`osascript -l JavaScript "${scriptPath}"`, {
-        timeout: this.TIMEOUT_MS,
-        encoding: 'utf8'
-      });
+      // Inject parameters into the loaded script
+      const scriptWithParams = this.injectParameters(script, params);
+      
+      // Write to temporary file to avoid escaping issues
+      const tmpFile = `/tmp/omnifocus-mcp-${Date.now()}-${Math.random().toString(36).substring(2, 11)}.jxa`;
+      await fs.writeFile(tmpFile, scriptWithParams, 'utf8');
+      
+      try {
+        // Execute the temporary script file
+        const result = execSync(`osascript -l JavaScript "${tmpFile}"`, {
+          timeout: this.TIMEOUT_MS,
+          encoding: 'utf8'
+        });
 
-      const parsedResult = this.parseResponse<T>(result);
-      return { success: true, data: parsedResult };
+        const parsedResult = this.parseResponse<T>(result);
+        return { success: true, data: parsedResult };
+      } finally {
+        // Clean up temporary file
+        try {
+          await fs.unlink(tmpFile);
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
 
     } catch (error: any) {
       const jxaError = this.categorizeError(error);
@@ -89,13 +104,17 @@ class JXABridge {
   private static injectParameters(script: string, params: Record<string, any>): string {
     let injectedScript = script;
     
+    // First replace all provided parameters
     for (const [key, value] of Object.entries(params)) {
       const placeholder = `{{${key}}}`;
       const serializedValue = typeof value === 'string' 
         ? `"${value.replace(/"/g, '\\"')}"` 
         : JSON.stringify(value);
-      injectedScript = injectedScript.replace(new RegExp(placeholder, 'g'), serializedValue);
+      injectedScript = injectedScript.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), serializedValue);
     }
+    
+    // Replace any remaining placeholders with undefined
+    injectedScript = injectedScript.replace(/\{\{[^}]+\}\}/g, 'undefined');
     
     return injectedScript;
   }

@@ -110,14 +110,15 @@ export class OmniFocusClient {
     return { ...this.connectionStatus };
   }
 
-  async getAllTasks(): Promise<Task[]> {
-    return this.withCache('getAllTasks', {}, async () => {
+  async getAllTasks(options: { limit?: number; offset?: number; includeCompleted?: boolean } = {}): Promise<any> {
+    const cacheKey = `getAllTasks_${JSON.stringify(options)}`;
+    return this.withCache(cacheKey, options, async () => {
       return this.withRetry(async () => {
-        const result = await JXABridge.execScriptFile<Task[]>('get-all-tasks');
+        const result = await JXABridge.execScriptFile('get-all-tasks', options);
         if (!result.success) {
           throw new Error(result.error?.originalMessage || 'Failed to retrieve tasks');
         }
-        return result.data || [];
+        return result.data || { tasks: [], pagination: { total: 0, offset: 0, limit: 100, returned: 0, hasMore: false } };
       });
     });
   }
