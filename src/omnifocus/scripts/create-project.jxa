@@ -38,7 +38,16 @@
     // Return project data - use try-catch for each property to handle conversion errors
     const result = {};
     
-    try { result.id = newProject.id; } catch (e) { result.id = null; }
+    try { 
+      const projectId = newProject.id();
+      if (projectId) result.id = projectId;
+    } catch (e) { 
+      // If id() fails, try accessing as property
+      try {
+        const projectId = newProject.id;
+        if (projectId) result.id = projectId;
+      } catch (e2) { result.id = null; }
+    }
     try { result.name = newProject.name; } catch (e) { result.name = 'Unknown Project'; }
     try { result.note = newProject.note || null; } catch (e) { result.note = null; }
     try { result.status = newProject.status; } catch (e) { result.status = 'active'; }

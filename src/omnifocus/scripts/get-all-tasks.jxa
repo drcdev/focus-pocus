@@ -26,8 +26,18 @@
       
       try {
         // Skip completed tasks if not requested
-        if (!includeCompleted && task.completed()) {
-          continue;
+        if (!includeCompleted) {
+          try {
+            const isCompleted = task.completed();
+            if (isCompleted) continue;
+          } catch (e) {
+            try {
+              const isCompleted = task.completed;
+              if (isCompleted) continue;
+            } catch (e2) {
+              // If we can't determine completion status, include the task
+            }
+          }
         }
         
         // Apply offset
@@ -39,10 +49,43 @@
         // Build minimal task data for performance - safe property access
         const taskData = {};
         
-        try { taskData.id = task.id; } catch (e) { taskData.id = null; }
-        try { taskData.name = task.name; } catch (e) { taskData.name = 'Unknown Task'; }
-        try { taskData.completed = task.completed; } catch (e) { taskData.completed = false; }
-        try { taskData.flagged = task.flagged; } catch (e) { taskData.flagged = false; }
+        try { 
+          const taskId = task.id();
+          if (taskId) taskData.id = taskId;
+        } catch (e) { 
+          // If id() fails, try accessing as property
+          try {
+            const taskId = task.id;
+            if (taskId) taskData.id = taskId;
+          } catch (e2) { taskData.id = null; }
+        }
+        try { 
+          const taskName = task.name();
+          if (taskName) taskData.name = taskName;
+        } catch (e) { 
+          try {
+            const taskName = task.name;
+            if (taskName) taskData.name = taskName;
+          } catch (e2) { taskData.name = 'Unknown Task'; }
+        }
+        try { 
+          const isCompleted = task.completed();
+          taskData.completed = isCompleted;
+        } catch (e) { 
+          try {
+            const isCompleted = task.completed;
+            taskData.completed = isCompleted;
+          } catch (e2) { taskData.completed = false; }
+        }
+        try { 
+          const isFlagged = task.flagged();
+          taskData.flagged = isFlagged;
+        } catch (e) { 
+          try {
+            const isFlagged = task.flagged;
+            taskData.flagged = isFlagged;
+          } catch (e2) { taskData.flagged = false; }
+        }
         
         // Only add optional fields if they exist (reduce JXA calls)
         try {

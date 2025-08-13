@@ -52,9 +52,15 @@
     
     // Try to get actual properties but keep fallbacks
     try { 
-      const tagId = newTag.id;
+      const tagId = newTag.id();
       if (tagId) result.id = tagId;
-    } catch (e) { /* Use fallback */ }
+    } catch (e) { 
+      // If id() fails, try accessing as property
+      try {
+        const tagId = newTag.id;
+        if (tagId) result.id = tagId;
+      } catch (e2) { /* Use fallback */ }
+    }
     
     try { 
       const tagName = newTag.name;
