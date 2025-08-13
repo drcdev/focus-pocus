@@ -25,35 +25,32 @@
     perspectives.push(...builtinPerspectives);
     
     // Try to get custom perspectives (Pro feature)
+    // Note: OmniFocus 4 has JXA API changes that make perspective access difficult
+    // For now, we'll add a note about this limitation
     try {
       const doc = app.defaultDocument;
       
-      // Note: Custom perspectives access may vary by OmniFocus version
-      // This is a basic attempt - actual implementation may need adjustment
       if (doc.perspectives) {
         const customPerspectives = doc.perspectives();
         
-        for (let i = 0; i < customPerspectives.length; i++) {
-          const perspective = customPerspectives[i];
-          
-          try {
-            const perspectiveData = {
-              id: perspective.id(),
-              name: perspective.name(),
-              type: 'custom',
-              identifier: perspective.identifier ? perspective.identifier() : null
-            };
-            
-            perspectives.push(perspectiveData);
-          } catch (perspectiveError) {
-            // Skip individual perspective errors
-            console.log('Error processing custom perspective:', perspectiveError.message);
-          }
+        // Add a placeholder indicating custom perspectives exist but can't be enumerated
+        if (customPerspectives && customPerspectives.length > 7) { // More than built-ins
+          perspectives.push({
+            id: 'custom_perspectives_placeholder',
+            name: 'Custom Perspectives Available',
+            type: 'info',
+            note: `Found ${customPerspectives.length} total perspectives (${customPerspectives.length - 7} custom), but OmniFocus 4 JXA API limitations prevent detailed enumeration. Use built-in perspective names or OmniFocus interface to access custom perspectives.`
+          });
         }
       }
     } catch (customPerspectiveError) {
-      // Custom perspectives not available (Standard edition) or other error
-      console.log('Custom perspectives not available:', customPerspectiveError.message);
+      // Custom perspectives not available or API access issue
+      perspectives.push({
+        id: 'custom_perspectives_error',
+        name: 'Custom Perspectives Status',
+        type: 'info',
+        note: 'Custom perspective access failed. This may be due to OmniFocus Standard edition (Pro required) or JXA API limitations in OmniFocus 4.'
+      });
     }
     
     return JSON.stringify(perspectives);

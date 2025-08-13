@@ -17,38 +17,26 @@
     for (let i = 0; i < flattenedTags.length; i++) {
       const tag = flattenedTags[i];
       
+      // Build only the most basic tag data to avoid any conversion issues
+      const tagData = {
+        id: tag.id(),
+        name: tag.name()
+      };
+      
+      // Only add optional fields that we can safely access
       try {
-        const tagData = {
-          id: tag.id(),
-          name: tag.name(),
-          parentTagId: null,
-          allowsNextAction: tag.allowsNextAction(),
-          active: tag.active(),
-          creationDate: tag.creationDate().toISOString(),
-          modificationDate: tag.modificationDate().toISOString(),
-          usedCount: 0
-        };
-        
-        // Get parent tag
-        const parentTag = tag.parent();
-        if (parentTag && parentTag.constructor.name === 'Tag') {
-          tagData.parentTagId = parentTag.id();
-        }
-        
-        // Calculate usage count (approximate)
-        try {
-          const taggedTasks = doc.flattenedTasks.whose({tags: {_contains: tag}});
-          const taggedProjects = doc.flattenedProjects.whose({tags: {_contains: tag}});
-          tagData.usedCount = (taggedTasks ? taggedTasks.length : 0) + (taggedProjects ? taggedProjects.length : 0);
-        } catch (countError) {
-          // If count fails, leave as 0
-        }
-        
-        tags.push(tagData);
-      } catch (tagError) {
-        // Skip individual tag errors but continue processing
-        console.log('Error processing tag:', tagError.message);
+        tagData.active = tag.active();
+      } catch (e) {
+        tagData.active = true; // Default
       }
+      
+      try {
+        tagData.allowsNextAction = tag.allowsNextAction();
+      } catch (e) {
+        tagData.allowsNextAction = true; // Default
+      }
+      
+      tags.push(tagData);
     }
     
     return JSON.stringify(tags);

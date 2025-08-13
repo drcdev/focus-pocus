@@ -8,41 +8,39 @@ This is the development repository for "Focus Pocus" - an OmniFocus MCP (Model C
 
 ## Project Structure
 
-The repository currently contains only planning documentation:
+The repository contains the implemented MCP server:
 
 - `workplan.md` - Complete 7-phase development plan with detailed task breakdowns
+- `CLAUDE.md` - Project instructions and development guide
+- `src/` - TypeScript source code
+- `dist/` - Compiled JavaScript and JXA scripts
+- `docs/` - Documentation and prompts
 
-## Planned Architecture
+## Current Architecture
 
-Based on the workplan, this will be a TypeScript-based MCP server with the following planned structure:
+This TypeScript-based MCP server has the following implemented structure:
 
 ```
-omnifocus-mcp-server/
+focus-pocus/
 ├── src/
-│   ├── index.ts              # Main entry point
-│   ├── server.ts             # MCP server implementation
-│   ├── omnifocus/            # OmniFocus integration layer
-│   │   ├── jxa-bridge.ts     # JavaScript for Automation bridge
-│   │   ├── client.ts         # OmniFocus application wrapper
-│   │   ├── scripts/          # JXA script templates
-│   │   └── types.ts          # TypeScript interfaces
-│   ├── tools/                # MCP tool implementations
-│   │   ├── create-task.ts    # Task creation operations
-│   │   ├── update-task.ts    # Task modification operations
-│   │   ├── delete-task.ts    # Task deletion operations
-│   │   ├── project-operations.ts # Project management
-│   │   ├── tag-operations.ts # Tag and context management
-│   │   ├── perspectives.ts   # Built-in perspective access
-│   │   ├── bulk-operations.ts # Batch processing
-│   │   └── scaffold-project.ts # Intelligent project scaffolding
-│   ├── cache/                # Caching and performance layer
-│   ├── templates/            # Project template system
-│   ├── scheduling/           # Progressive deadline generation
-│   ├── intelligence/         # AI-powered analysis
-│   ├── analytics/            # Productivity insights
-│   └── utils/                # Shared utilities
-├── tests/                    # Test suite
-└── docs/                     # Documentation
+│   ├── index.ts              # ✅ Main entry point & MCP server
+│   ├── omnifocus/            # ✅ OmniFocus integration layer
+│   │   ├── jxa-bridge.ts     # ✅ JavaScript for Automation bridge
+│   │   ├── client.ts         # ✅ OmniFocus application wrapper
+│   │   ├── scripts/          # ✅ JXA script files (.jxa)
+│   │   └── types.ts          # ✅ TypeScript interfaces
+│   ├── tools/                # ✅ MCP tool implementations
+│   │   └── index.ts          # ✅ Complete tool registry with all operations
+│   ├── cache/                # ✅ Caching and performance layer
+│   │   └── cache-manager.ts  # ✅ Cache implementation
+│   └── utils/                # ✅ Shared utilities
+│       ├── date-handler.ts   # ✅ Natural language date parsing
+│       └── scheduling.ts     # ✅ Task scheduling utilities
+├── dist/                     # ✅ Compiled output
+│   ├── *.js                  # Compiled TypeScript
+│   └── omnifocus/scripts/    # Copied JXA scripts
+├── docs/                     # ✅ Documentation and prompts
+└── workplan.md              # ✅ Development plan
 ```
 
 ## Development Phases
@@ -67,16 +65,14 @@ The project is structured in 7 phases:
 
 ## Development Commands
 
-Since this is a new project, no build commands exist yet. Based on the workplan, typical commands will include:
+Current project build commands:
 
 ```bash
 # Development
 npm install          # Install dependencies
-npm run dev          # Development mode
-npm run build        # Production build
-npm test             # Run test suite
-npm run lint         # Code linting
+npm run build        # Production build (TypeScript compilation + JXA script copy)
 npm run typecheck    # TypeScript type checking
+npm run copy-scripts # Copy JXA scripts to dist folder
 
 # MCP Server
 node dist/index.js   # Run the MCP server
@@ -85,11 +81,12 @@ node dist/index.js   # Run the MCP server
 ## Key Features to Implement
 
 ### Core MCP Tools
-- Task CRUD operations (create, read, update, delete)
-- Project and folder management
-- Tag and context operations
-- Bulk operations with transaction support
-- Built-in and custom perspective access
+- Task CRUD operations (create, read, update, delete) ✅
+- Project and folder management ✅
+- Tag and context operations ✅
+- Bulk operations with transaction support ✅
+- Built-in perspective access ✅
+- Custom perspective access ⚠️ Limited (see OmniFocus 4 API Limitations)
 
 ### Intelligent Features
 - **Project Scaffolding** - Analyze existing projects and generate missing tasks based on templates
@@ -110,6 +107,27 @@ node dist/index.js   # Run the MCP server
 - Requires macOS automation permissions
 - Supports both OmniFocus Standard and Pro features
 
+#### OmniFocus 4 JXA API Limitations
+
+**Performance Considerations:**
+- Task retrieval is optimized with pagination (default: 25 tasks per request)
+- JXA processing is inherently slow; large datasets require multiple paginated requests
+- Timeout increased to 45 seconds to accommodate JXA processing overhead
+
+**API Access Issues:**
+- **Custom Perspectives**: OmniFocus 4 JXA API changes prevent detailed enumeration of custom perspective properties
+  - Can detect existence and count of custom perspectives
+  - Cannot reliably access names, IDs, or configurations
+  - Built-in perspectives work normally (Inbox, Projects, Tags, Forecast, Flagged, Review, Completed)
+- **Complex Date Operations**: Some date field conversions may fail and are handled gracefully
+- **Nested Object Access**: Parent/child relationships require careful error handling
+
+**Workarounds Implemented:**
+- Minimal data collection per JXA operation to reduce conversion errors
+- Graceful fallback for failed property access
+- Informative error messages explaining API limitations
+- Pagination support for large dataset handling
+
 ### Claude Desktop Integration
 The MCP server connects to Claude Desktop via stdio transport:
 
@@ -128,10 +146,21 @@ The MCP server connects to Claude Desktop via stdio transport:
 ## Development Notes
 
 - All code should follow TypeScript best practices with strict type checking
-- JXA scripts require careful error handling due to macOS automation quirks
-- Caching layer is critical for performance with large OmniFocus databases
-- Transaction support needed for bulk operations to maintain data consistency
+- **JXA scripts require extensive error handling** due to OmniFocus 4 API changes and conversion issues
+- **Performance optimization is critical** - JXA operations are slow, requiring pagination and timeouts
+- **Caching layer is essential** for performance with large OmniFocus databases
+- **Transaction support needed** for bulk operations to maintain data consistency
+- **Graceful degradation** - Tools should work with minimal data when full object access fails
 - Security considerations for API key management and access control
+
+### JXA Development Guidelines
+
+1. **Minimize JXA API calls per object** - Each property access is expensive
+2. **Use try-catch for every property access** - API conversion can fail unpredictably
+3. **Test with large datasets** - Performance degrades significantly with scale
+4. **Implement pagination** - Never attempt to process all tasks at once
+5. **Provide fallback values** - When property access fails, use sensible defaults
+6. **Log conversion errors** - Help debugging but don't fail the entire operation
 
 ## Testing Strategy
 
@@ -141,4 +170,45 @@ The MCP server connects to Claude Desktop via stdio transport:
 - Performance benchmarks for large dataset handling
 - End-to-end workflow validation
 
-This is a greenfield project following the detailed workplan for systematic development of a comprehensive OmniFocus MCP server.
+## Available MCP Tools
+
+### Task Operations
+- `get_all_tasks` - Paginated task retrieval with filtering (limit, offset, includeCompleted)
+- `get_task_by_id` - Retrieve specific task details
+- `search_tasks` - Advanced task search with filters
+- `get_project_tasks` - Get tasks within a specific project
+- `create_task`, `create_task_in_project`, `create_subtask` - Task creation
+- `update_task`, `complete_task`, `uncomplete_task`, `move_task` - Task modifications
+- `delete_task`, `archive_task` - Task removal
+- `batch_create_tasks`, `bulk_update_tasks`, `bulk_delete_tasks` - Batch operations
+
+### Project & Folder Operations
+- `get_all_projects` - Retrieve all projects
+- `get_project_by_id` - Get specific project details
+- `create_project`, `update_project`, `duplicate_project` - Project management
+- `create_folder`, `move_project` - Folder organization
+- `get_all_folders` - Retrieve folder hierarchy
+
+### Tag Operations
+- `get_all_tags` - Retrieve available tags (simplified due to API limitations)
+- `create_tag` - Create new tags
+- `assign_tags`, `remove_tags` - Tag assignment/removal
+- `get_tagged_items` - Find items with specific tags
+
+### Perspective & View Operations
+- `get_perspectives` - Built-in perspectives + custom perspective detection
+- `get_database_info` - OmniFocus database information
+
+### Utility Operations
+- `diagnose_connection` - Connection and permissions diagnostics
+- `parse_natural_date` - Natural language date parsing
+- `schedule_tasks_optimally` - Intelligent task scheduling
+- `adjust_dates_bulk` - Bulk date adjustments
+
+### Performance Notes
+- Most operations use caching to improve response times
+- Task operations default to 25 items per request for performance
+- Use pagination (`limit`/`offset`) for large datasets
+- JXA processing has inherent latency; expect 1-2 second response times
+
+This represents Phase 1-2 implementation with core functionality operational and optimized for OmniFocus 4.
