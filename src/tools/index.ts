@@ -399,7 +399,7 @@ export class MCPToolRegistry {
             query: { type: 'string', description: 'Text search in task names and notes' },
             projectId: { type: 'string', description: 'Filter by specific project ID' },
             tagId: { type: 'string', description: 'Filter by specific tag ID' },
-            status: { type: 'string', enum: ['available', 'completed', 'dropped', 'all'], description: 'Task status filter' },
+            status: { type: 'string', enum: ['available', 'completed', 'dropped', 'all'], description: 'Task status filter (default: available)' },
             completed: { type: 'boolean', description: 'Filter by completion status' },
             flagged: { type: 'boolean', description: 'Filter by flagged status' },
             dueBefore: { type: 'string', description: 'Filter tasks due before this date (ISO format)' },
@@ -469,11 +469,13 @@ export class MCPToolRegistry {
       },
       {
         name: 'get_project_tasks',
-        description: 'Get all tasks within a specific project',
+        description: 'Get all tasks within a specific project (excludes completed and dropped by default)',
         inputSchema: {
           type: 'object',
           properties: {
-            projectId: { type: 'string', description: 'Project ID to get tasks from' }
+            projectId: { type: 'string', description: 'Project ID to get tasks from' },
+            includeCompleted: { type: 'boolean', description: 'Include completed tasks (default: false)' },
+            includeDropped: { type: 'boolean', description: 'Include dropped tasks (default: false)' }
           },
           required: ['projectId']
         }
@@ -637,7 +639,7 @@ export class MCPToolRegistry {
         case 'get_task_by_id':
           return await this.client.getTaskById(args.taskId);
         case 'search_tasks':
-          return await this.client.searchTasks(args);
+          return await this.handleSearchTasks(args);
         case 'get_all_projects':
           return await this.client.getAllProjects();
         case 'get_project_by_id':
@@ -789,10 +791,32 @@ export class MCPToolRegistry {
     return this.scheduler.adjustDatesInBulk(tasks, args.adjustment, args.options);
   }
 
+  private async handleSearchTasks(args: any) {
+    const searchOptions = { ...args };
+    
+    // Default to 'available' status if no status or completed flag is specified
+    if (!searchOptions.status && searchOptions.completed === undefined) {
+      searchOptions.status = 'available';
+    }
+    
+    return await this.client.searchTasks(searchOptions);
+  }
+
   private async handleGetProjectTasks(args: any) {
-    return await this.client.searchTasks({
+    const searchOptions: any = {
       projectId: args.projectId
-    });
+    };
+    
+    // Default to excluding completed and dropped tasks
+    if (args.includeCompleted || args.includeDropped) {
+      // If user wants to include completed or dropped, set status to 'all'
+      searchOptions.status = 'all';
+    } else {
+      // Default: only available tasks
+      searchOptions.status = 'available';
+    }
+    
+    return await this.client.searchTasks(searchOptions);
   }
 
   private async handleDiagnoseConnection() {
