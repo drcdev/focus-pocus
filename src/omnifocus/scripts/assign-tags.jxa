@@ -16,26 +16,83 @@
     
     // Find the item
     let item = null;
-    if (itemType === 'task') {
-      item = doc.flattenedTasks.byId(itemId);
-    } else {
-      item = doc.flattenedProjects.byId(itemId);
+    try {
+      if (itemType === 'task' || !itemType) {
+        item = doc.flattenedTasks.byId(itemId);
+      } else {
+        item = doc.flattenedProjects.byId(itemId);
+      }
+    } catch (e) {
+      throw new Error('Item not found');
     }
     
-    if (!item || !item.id()) {
+    if (!item || !item.id) {
       throw new Error('Item not found');
     }
     
     // Get tags and assign them
     const tagsToAssign = [];
     for (const tagId of tagIds) {
-      const tag = doc.flattenedTags.byId(tagId);
-      if (tag) tagsToAssign.push(tag);
+      try {
+        const tag = doc.flattenedTags.byId(tagId);
+        if (tag && tag.id) tagsToAssign.push(tag);
+      } catch (e) {
+        // Skip invalid tags
+      }
     }
     
     if (tagsToAssign.length > 0) {
-      const currentTags = item.tags();
-      item.tags = currentTags.concat(tagsToAssign);
+      try {
+        // Get current tags safely
+        let currentTags = [];
+        try {
+          const existingTags = item.tags;
+          if (existingTags && existingTags.length > 0) {
+            currentTags = [];
+            for (let i = 0; i < existingTags.length; i++) {
+              try {
+                currentTags.push(existingTags[i]);
+              } catch (e) {
+                // Skip invalid existing tags
+              }
+            }
+          }
+        } catch (e) {
+          currentTags = [];
+        }
+        
+        // Create combined tag array more carefully
+        const allTags = [];
+        
+        // Add existing tags first
+        for (const tag of currentTags) {
+          allTags.push(tag);
+        }
+        
+        // Add new tags, avoiding duplicates
+        for (const newTag of tagsToAssign) {
+          let isDuplicate = false;
+          try {
+            for (const existingTag of currentTags) {
+              if (existingTag.id === newTag.id) {
+                isDuplicate = true;
+                break;
+              }
+            }
+          } catch (e) {
+            // If we can't check for duplicates, add anyway
+          }
+          
+          if (!isDuplicate) {
+            allTags.push(newTag);
+          }
+        }
+        
+        // Assign the combined tag array
+        item.tags = allTags;
+      } catch (e) {
+        throw new Error('Failed to assign tags: ' + e.message);
+      }
     }
     
     return JSON.stringify({ success: true });

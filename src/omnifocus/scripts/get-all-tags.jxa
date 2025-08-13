@@ -13,24 +13,26 @@
     const tags = [];
     
     try {
-      const allTags = doc.flattenedTags();
+      const allTags = doc.flattenedTags;
       
       for (let i = 0; i < allTags.length; i++) {
         const tag = allTags[i];
         try {
           const tagData = {
-            id: tag.id(),
-            name: tag.name(),
             parentTagId: null,
             availableTaskCount: 0,
             remainingTaskCount: 0
           };
           
+          // Safe property access for core properties
+          try { tagData.id = tag.id; } catch (e) { tagData.id = null; }
+          try { tagData.name = tag.name; } catch (e) { tagData.name = 'Unknown Tag'; }
+          
           // Get parent tag safely
           try {
-            const container = tag.container();
-            if (container && container.class() === 'tag') {
-              tagData.parentTagId = container.id();
+            const container = tag.container;
+            if (container && container.id) {
+              tagData.parentTagId = container.id;
             }
           } catch (e) {
             // Container might not exist or be accessible
@@ -38,13 +40,16 @@
           
           // Get task counts safely
           try {
-            tagData.availableTaskCount = tag.availableTaskCount();
-            tagData.remainingTaskCount = tag.remainingTaskCount();
+            tagData.availableTaskCount = tag.availableTaskCount || 0;
+            tagData.remainingTaskCount = tag.remainingTaskCount || 0;
           } catch (e) {
             // Task counts might fail
           }
           
-          tags.push(tagData);
+          // Only add tags with valid IDs
+          if (tagData.id) {
+            tags.push(tagData);
+          }
         } catch (e) {
           // Skip tag if it fails to process
         }

@@ -20,7 +20,7 @@
     let foundTask = null;
     try {
       foundTask = doc.flattenedTasks.byId(taskId);
-      if (!foundTask || !foundTask.id()) {
+      if (!foundTask || !foundTask.id) {
         throw new Error('Task not found');
       }
     } catch (e) {
@@ -32,48 +32,71 @@
       });
     }
     
+    // Build task data with safe property access
     const taskData = {
-      id: foundTask.id(),
-      name: foundTask.name(),
-      note: foundTask.note() || null,
-      completed: foundTask.completed(),
-      completionDate: foundTask.completionDate() ? foundTask.completionDate().toISOString() : null,
-      creationDate: foundTask.creationDate().toISOString(),
-      modificationDate: foundTask.modificationDate().toISOString(),
-      dueDate: foundTask.dueDate() ? foundTask.dueDate().toISOString() : null,
-      deferDate: foundTask.deferDate() ? foundTask.deferDate().toISOString() : null,
-      estimatedMinutes: foundTask.estimatedMinutes() || null,
-      flagged: foundTask.flagged(),
-      repetitionRule: foundTask.repetitionRule() ? foundTask.repetitionRule().toString() : null,
       tags: [],
       projectId: null,
       parentTaskId: null,
       containingProjectInfo: null
     };
     
+    // Use try-catch for each property to handle conversion errors
+    try { taskData.id = foundTask.id; } catch (e) { taskData.id = null; }
+    try { taskData.name = foundTask.name; } catch (e) { taskData.name = 'Unknown Task'; }
+    try { taskData.note = foundTask.note || null; } catch (e) { taskData.note = null; }
+    try { taskData.completed = foundTask.completed; } catch (e) { taskData.completed = false; }
+    try { taskData.completionDate = foundTask.completionDate ? foundTask.completionDate.toISOString() : null; } catch (e) { taskData.completionDate = null; }
+    try { taskData.creationDate = foundTask.creationDate ? foundTask.creationDate.toISOString() : null; } catch (e) { taskData.creationDate = null; }
+    try { taskData.modificationDate = foundTask.modificationDate ? foundTask.modificationDate.toISOString() : null; } catch (e) { taskData.modificationDate = null; }
+    try { taskData.dueDate = foundTask.dueDate ? foundTask.dueDate.toISOString() : null; } catch (e) { taskData.dueDate = null; }
+    try { taskData.deferDate = foundTask.deferDate ? foundTask.deferDate.toISOString() : null; } catch (e) { taskData.deferDate = null; }
+    try { taskData.estimatedMinutes = foundTask.estimatedMinutes || null; } catch (e) { taskData.estimatedMinutes = null; }
+    try { taskData.flagged = foundTask.flagged; } catch (e) { taskData.flagged = false; }
+    try { taskData.repetitionRule = foundTask.repetitionRule ? foundTask.repetitionRule.toString() : null; } catch (e) { taskData.repetitionRule = null; }
+    
     // Get tags
-    const taskTags = foundTask.tags();
-    if (taskTags && taskTags.length > 0) {
-      for (let j = 0; j < taskTags.length; j++) {
-        taskData.tags.push(taskTags[j].name());
+    try {
+      const taskTags = foundTask.tags;
+      if (taskTags && taskTags.length > 0) {
+        for (let j = 0; j < taskTags.length; j++) {
+          try {
+            taskData.tags.push(taskTags[j].name);
+          } catch (e) {
+            // Skip this tag if conversion fails
+          }
+        }
       }
+    } catch (e) {
+      // Tags not accessible
     }
     
     // Get containing project
-    const containingProject = foundTask.containingProject();
-    if (containingProject) {
-      taskData.projectId = containingProject.id();
-      taskData.containingProjectInfo = {
-        id: containingProject.id(),
-        name: containingProject.name(),
-        status: containingProject.status()
-      };
+    try {
+      const containingProject = foundTask.containingProject;
+      if (containingProject) {
+        try { taskData.projectId = containingProject.id; } catch (e) { }
+        try {
+          taskData.containingProjectInfo = {
+            id: containingProject.id,
+            name: containingProject.name,
+            status: containingProject.status
+          };
+        } catch (e) {
+          // Project info might not be accessible
+        }
+      }
+    } catch (e) {
+      // Project info might not be accessible
     }
     
     // Get parent task
-    const parentTask = foundTask.parentTask();
-    if (parentTask) {
-      taskData.parentTaskId = parentTask.id();
+    try {
+      const parentTask = foundTask.parentTask;
+      if (parentTask) {
+        try { taskData.parentTaskId = parentTask.id; } catch (e) { }
+      }
+    } catch (e) {
+      // Parent task info might not be accessible
     }
     
     return JSON.stringify(taskData);

@@ -16,20 +16,48 @@
     
     // Find the item
     let item = null;
-    if (itemType === 'task') {
-      item = doc.flattenedTasks.byId(itemId);
-    } else {
-      item = doc.flattenedProjects.byId(itemId);
-    }
-    
-    if (!item || !item.id()) {
-      throw new Error('Item not found');
+    try {
+      if (itemType === 'task') {
+        item = doc.flattenedTasks.byId(itemId);
+      } else {
+        item = doc.flattenedProjects.byId(itemId);
+      }
+      
+      if (!item || !item.id) {
+        throw new Error('Item not found');
+      }
+    } catch (e) {
+      return JSON.stringify({
+        error: true,
+        message: 'Item not found',
+        code: 'NOT_FOUND'
+      });
     }
     
     // Remove specified tags
-    const currentTags = item.tags();
-    const filteredTags = currentTags.filter(tag => !tagIds.includes(tag.id()));
-    item.tags = filteredTags;
+    try {
+      const currentTags = item.tags;
+      if (currentTags && currentTags.length > 0) {
+        const filteredTags = [];
+        for (let i = 0; i < currentTags.length; i++) {
+          const tag = currentTags[i];
+          let tagId = null;
+          try {
+            tagId = tag.id;
+          } catch (e) {
+            // Skip this tag if we can't get its ID
+            continue;
+          }
+          
+          if (!tagIds.includes(tagId)) {
+            filteredTags.push(tag);
+          }
+        }
+        item.tags = filteredTags;
+      }
+    } catch (e) {
+      throw new Error('Cannot remove tags: ' + e.message);
+    }
     
     return JSON.stringify({ success: true });
     

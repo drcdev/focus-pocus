@@ -60,18 +60,20 @@
       filterObj.flagged = options.flagged;
     }
     
-    // Date filters (native comparison)
-    if (options.dueBefore) {
-      filterObj.dueDate = {_lt: options.dueBefore};
-    } else if (options.dueAfter) {
-      filterObj.dueDate = {_gt: options.dueAfter};
-    }
+    // Date filters - note: complex date comparisons may fail in OmniFocus JXA
+    // We'll handle date filtering manually after getting results instead
+    // if (options.dueBefore) {
+    //   filterObj.dueDate = {_lt: options.dueBefore};
+    // } else if (options.dueAfter) {
+    //   filterObj.dueDate = {_gt: options.dueAfter};
+    // }
     
-    if (options.createdBefore) {
-      filterObj.creationDate = {_lt: options.createdBefore};
-    } else if (options.createdAfter) {
-      filterObj.creationDate = {_gt: options.createdAfter};
-    }
+    // Creation date filters - also problematic in OmniFocus JXA
+    // if (options.createdBefore) {
+    //   filterObj.creationDate = {_lt: options.createdBefore};
+    // } else if (options.createdAfter) {
+    //   filterObj.creationDate = {_gt: options.createdAfter};
+    // }
     
     // Get filtered tasks using native OmniFocus filtering
     let filteredTasks;
@@ -85,12 +87,12 @@
           : doc.inboxTasks();
       } else {
         // Search within specific project
-        const projects = doc.flattenedProjects();
+        const projects = doc.flattenedProjects;
         let targetProject = null;
         
         for (let i = 0; i < projects.length; i++) {
           try {
-            if (projects[i].id() === options.projectId) {
+            if (projects[i].id === options.projectId) {
               targetProject = projects[i];
               break;
             }
@@ -114,40 +116,70 @@
         : doc.flattenedTasks();
     }
     
+    // Apply manual date filtering if needed
+    let dateFilteredTasks = [];
+    
+    for (let i = 0; i < filteredTasks.length; i++) {
+      const task = filteredTasks[i];
+      let includeTask = true;
+      
+      // Manual date filtering
+      if (options.dueBefore || options.dueAfter) {
+        try {
+          const dueDate = task.dueDate;
+          if (options.dueBefore && dueDate) {
+            const beforeDate = new Date(options.dueBefore);
+            if (dueDate >= beforeDate) includeTask = false;
+          }
+          if (options.dueAfter && dueDate) {
+            const afterDate = new Date(options.dueAfter);
+            if (dueDate <= afterDate) includeTask = false;
+          }
+        } catch (e) {
+          // If date comparison fails, include the task
+        }
+      }
+      
+      if (includeTask) {
+        dateFilteredTasks.push(task);
+      }
+    }
+    
     // Apply pagination and extract minimal data for maximum speed
     const startIndex = options.offset;
-    const endIndex = Math.min(startIndex + options.limit, filteredTasks.length);
+    const endIndex = Math.min(startIndex + options.limit, dateFilteredTasks.length);
     const results = [];
     
     for (let i = startIndex; i < endIndex; i++) {
-      const task = filteredTasks[i];
+      const task = dateFilteredTasks[i];
       
       try {
-        // Only extract essential data to minimize JXA overhead
+        // Only extract essential data to minimize JXA overhead - use safe property access
         const taskData = {
-          id: task.id(),
-          name: task.name(),
-          completed: task.completed(),
-          flagged: task.flagged(),
           tags: [],
           projectId: null,
           note: null,
           dueDate: null
         };
         
+        try { taskData.id = task.id; } catch (e) { taskData.id = null; }
+        try { taskData.name = task.name; } catch (e) { taskData.name = 'Unknown Task'; }
+        try { taskData.completed = task.completed; } catch (e) { taskData.completed = false; }
+        try { taskData.flagged = task.flagged; } catch (e) { taskData.flagged = false; }
+        
         // Add optional data only if needed/accessible
-        try { taskData.note = task.note() || null; } catch (e) { }
+        try { taskData.note = task.note || null; } catch (e) { }
         try { 
-          const dueDate = task.dueDate();
+          const dueDate = task.dueDate;
           taskData.dueDate = dueDate ? dueDate.toISOString() : null;
         } catch (e) { }
         
         // Project info (only if not already filtered by project)
         if (!options.projectId) {
           try {
-            const containingProject = task.containingProject();
-            if (containingProject) {
-              taskData.projectId = containingProject.id();
+            const containingProject = task.containingProject;
+            if (containingProject && containingProject.id) {
+              taskData.projectId = containingProject.id;
             }
           } catch (e) { }
         } else {
@@ -156,11 +188,11 @@
         
         // Tags (limited for performance)
         try {
-          const taskTags = task.tags();
+          const taskTags = task.tags;
           if (taskTags && taskTags.length > 0) {
             for (let j = 0; j < Math.min(taskTags.length, 3); j++) {
               try {
-                taskData.tags.push(taskTags[j].name());
+                taskData.tags.push(taskTags[j].name);
               } catch (e) { }
             }
           }

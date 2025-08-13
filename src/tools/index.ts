@@ -680,16 +680,26 @@ export class MCPToolRegistry {
     
     if (args.dueDate) {
       if (typeof args.dueDate === 'string') {
-        options.dueDate = this.dateHandler.parseNaturalDate(args.dueDate);
+        const parsedDate = this.dateHandler.parseNaturalDate(args.dueDate);
+        if (parsedDate) {
+          options.dueDate = parsedDate.toISOString();
+        } else {
+          throw new Error(`Could not parse due date: "${args.dueDate}"`);
+        }
       } else if (args.dueDate instanceof Date) {
-        options.dueDate = args.dueDate;
+        options.dueDate = args.dueDate.toISOString();
       }
     }
     if (args.deferDate) {
       if (typeof args.deferDate === 'string') {
-        options.deferDate = this.dateHandler.parseNaturalDate(args.deferDate);
+        const parsedDate = this.dateHandler.parseNaturalDate(args.deferDate);
+        if (parsedDate) {
+          options.deferDate = parsedDate.toISOString();
+        } else {
+          throw new Error(`Could not parse defer date: "${args.deferDate}"`);
+        }
       } else if (args.deferDate instanceof Date) {
-        options.deferDate = args.deferDate;
+        options.deferDate = args.deferDate.toISOString();
       }
     }
     

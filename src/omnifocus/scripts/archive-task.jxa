@@ -20,7 +20,7 @@
     let task = null;
     try {
       task = doc.flattenedTasks.byId(taskId);
-      if (!task || !task.id()) {
+      if (!task || !task.id) {
         throw new Error('Task not found');
       }
     } catch (e) {
@@ -31,8 +31,9 @@
       });
     }
     
-    // Get task details before archiving
-    const taskName = task.name();
+    // Get task details before archiving with safe property access
+    let taskName = 'Unknown Task';
+    try { taskName = task.name; } catch (e) { taskName = 'Unknown Task'; }
     
     // Archive by completing the task
     task.completed = true;
@@ -44,10 +45,19 @@
       archiveTag = doc.tags.push(app.Tag({ name: 'Archive' }));
     }
     
-    // Add archive tag to task
-    const currentTags = task.tags();
-    currentTags.push(archiveTag);
-    task.tags = currentTags;
+    // Add archive tag to task with safe property access
+    try {
+      const currentTags = task.tags;
+      if (currentTags) {
+        const updatedTags = Array.from(currentTags);
+        updatedTags.push(archiveTag);
+        task.tags = updatedTags;
+      } else {
+        task.tags = [archiveTag];
+      }
+    } catch (e) {
+      // If tags can't be accessed, just complete the task
+    }
     
     return JSON.stringify({
       success: true,

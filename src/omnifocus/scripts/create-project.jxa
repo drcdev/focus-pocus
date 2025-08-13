@@ -35,25 +35,37 @@
       newProject = doc.projects.push(app.Project(projectProps));
     }
     
-    // Return project data
-    const result = {
-      id: newProject.id(),
-      name: newProject.name(),
-      note: newProject.note() || null,
-      status: newProject.status(),
-      creationDate: newProject.creationDate().toISOString(),
-      modificationDate: newProject.modificationDate().toISOString(),
-      dueDate: newProject.dueDate() ? newProject.dueDate().toISOString() : null,
-      deferDate: newProject.deferDate() ? newProject.deferDate().toISOString() : null,
-      estimatedMinutes: newProject.estimatedMinutes() || null,
-      flagged: newProject.flagged(),
-      tags: [],
-      folderId: null,
-      taskCount: 0,
-      completedTaskCount: 0,
-      remainingTaskCount: 0,
-      nextTaskId: null
-    };
+    // Return project data - use try-catch for each property to handle conversion errors
+    const result = {};
+    
+    try { result.id = newProject.id; } catch (e) { result.id = null; }
+    try { result.name = newProject.name; } catch (e) { result.name = 'Unknown Project'; }
+    try { result.note = newProject.note || null; } catch (e) { result.note = null; }
+    try { result.status = newProject.status; } catch (e) { result.status = 'active'; }
+    try { result.creationDate = newProject.creationDate ? newProject.creationDate.toISOString() : new Date().toISOString(); } catch (e) { result.creationDate = new Date().toISOString(); }
+    try { result.modificationDate = newProject.modificationDate ? newProject.modificationDate.toISOString() : new Date().toISOString(); } catch (e) { result.modificationDate = new Date().toISOString(); }
+    try { result.dueDate = newProject.dueDate ? newProject.dueDate.toISOString() : null; } catch (e) { result.dueDate = null; }
+    try { result.deferDate = newProject.deferDate ? newProject.deferDate.toISOString() : null; } catch (e) { result.deferDate = null; }
+    try { result.estimatedMinutes = newProject.estimatedMinutes || null; } catch (e) { result.estimatedMinutes = null; }
+    try { result.flagged = newProject.flagged; } catch (e) { result.flagged = false; }
+    
+    result.tags = [];
+    result.taskCount = 0;
+    result.completedTaskCount = 0;
+    result.remainingTaskCount = 0;
+    result.nextTaskId = null;
+    
+    // Get folder ID from the project's container
+    try {
+      const container = newProject.container;
+      if (container && container.id) {
+        result.folderId = container.id;
+      } else {
+        result.folderId = options.folderId || null;
+      }
+    } catch (e) {
+      result.folderId = options.folderId || null;
+    }
     
     return JSON.stringify(result);
     

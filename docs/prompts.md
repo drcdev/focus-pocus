@@ -1,219 +1,560 @@
-Here's a complete list of prompts to test all the functionality we've built:
+# Focus Pocus MCP Server - Sequential Test Script
 
-📖 Read Operations (Data Retrieval)
+This script provides a comprehensive test sequence for the Focus Pocus MCP server. Each prompt is designed to build on previous operations, creating a realistic workflow while testing all 36 available MCP tools registered in the server.
 
-Basic Data Viewing
+## Coverage Reference (All MCP Tools)
 
-- "Show me all my current projects"
-- "List all my tasks"
-- "Get all my tags"
-- "Show me all folders"
-- "What perspectives do I have available?"
-- "Get database statistics and information"
+**Task Creation (4 tools):** create_task, create_task_in_project, batch_create_tasks, create_subtask  
+**Task Updates (6 tools):** update_task, complete_task, uncomplete_task, move_task, bulk_update_tasks  
+**Task Deletion (3 tools):** delete_task, archive_task, bulk_delete_tasks  
+**Project Management (5 tools):** create_project, update_project, duplicate_project, create_folder, move_project  
+**Tag Management (4 tools):** create_tag, assign_tags, remove_tags, get_tagged_items  
+**Read/Query (10 tools):** get_all_tasks, get_task_by_id, search_tasks, get_all_projects, get_project_by_id, get_all_tags, get_all_folders, get_perspectives, get_database_info, get_project_tasks, diagnose_connection  
+**Date/Scheduling (3 tools):** parse_natural_date, schedule_tasks_optimally, adjust_dates_bulk
 
-Specific Item Lookups
+## Instructions
 
-- "Get details for task ID [task-id]"
-- "Show me project ID [project-id]"
-- "Find task with ID [specific-task-id]"
+- Run each prompt one at a time
+- Wait for completion before proceeding to the next prompt and do not try alternative methods
+- If a prompt fails or the tool is not found, DO NOT CONTINUE to the next prompt. Prepare an error report for the user that includes: the prompt, the mcp tool, the request, the response, and the error message.
+- Note any IDs returned (tasks, projects, folders, tags) for use in subsequent prompts
+- Some prompts reference previous results - substitute actual IDs when indicated
 
-Advanced Search & Filtering
+---
 
-- "Search for tasks containing 'meeting'"
-- "Find all flagged tasks"
-- "Show me completed tasks"
-- "Get all overdue tasks"
-- "Search for tasks with 'urgent' in the name"
-- "Find tasks due this week"
-- "Show me tasks in the inbox"
-- "Get all tasks tagged with 'work'"
-- "Find all tasks in project [project-name]"
+## Phase 1: System Initialization & Diagnostics
 
-✏️ Task Creation
+### 1.1 Connection Testing _(diagnose_connection)_
 
-Basic Task Creation
+```
+Run the connection diagnostic and check OmniFocus connection status
+```
 
-- "Create a task called 'Review quarterly budget'"
-- "Create a new task 'Call dentist for appointment'"
-- "Add a task 'Update project documentation'"
+### 1.2 Database Overview _(get_database_info, get_perspectives)_
 
-Tasks with Dates
+```
+Get OmniFocus database information and show me all available perspectives
+```
 
-- "Create a task 'Team meeting preparation' due tomorrow"
-- "Create a task 'Submit expense report' due next Friday"
-- "Create a task 'Review contract' due August 25th, 2025"
-- "Add a task 'Grocery shopping' due this weekend"
-- "Create a task 'Project deadline' due in 2 weeks"
+### 1.3 Initial Data Survey _(get_all_projects)_
 
-Tasks with Full Properties
+```
+Show me database statistics and list all my current projects
+```
 
-- "Create a flagged task 'Important client call' with note 'Discuss project timeline' due tomorrow"
-- "Create a task 'Code review' estimated at 120 minutes due next Monday"
-- "Add a flagged task 'Budget presentation' with note 'Prepare slides and financial data'"
-- "Create a task 'Research competitor analysis' with 90 minute estimate"
+---
 
-Project-Specific Tasks
+## Phase 2: Basic Data Exploration
 
-- "Create a task 'Design mockups' in project [project-id]"
-- "Add a task 'Write test cases' to the Website Redesign project"
-- "Create a subtask 'Research requirements' under task [parent-task-id]"
+### 2.1 Folder Structure _(get_all_folders)_
 
-Bulk Task Creation
+```
+Show me all folders and get the folder hierarchy
+```
 
-- "Create 5 tasks for planning my vacation"
-- "Create multiple tasks: 'Buy groceries', 'Clean house', 'Pay bills'"
-- "Add tasks for my morning routine: exercise, shower, breakfast"
+### 2.2 Tag System _(get_all_tags)_
 
-🔄 Task Updates
+```
+Get all my tags and show the tag hierarchy
+```
 
-Basic Task Updates
+### 2.3 Current Tasks Overview _(get_all_tasks)_
 
-- "Update task [task-id] to be flagged"
-- "Mark task [task-id] as completed"
-- "Change the name of task [task-id] to 'Updated Task Name'"
-- "Add a note to task [task-id]: 'Additional context information'"
+```
+List all my tasks with a limit of 10, then show me some completed tasks using includeCompleted
+```
 
-Date Updates
+---
 
-- "Update task [task-id] to be due tomorrow"
-- "Change task [task-id] due date to next Friday"
-- "Set task [task-id] defer date to next Monday"
-- "Remove the due date from task [task-id]"
+## Phase 3: Project & Folder Creation
 
-Task Status Changes
+### 3.1 Create Test Folder _(create_folder)_
 
-- "Complete task [task-id]"
-- "Mark task [task-id] as incomplete"
-- "Flag task [task-id] as important"
-- "Unflag task [task-id]"
+```
+Create a folder called 'Test Projects'
+```
 
-Task Movement
+_Note the folder ID returned_
 
-- "Move task [task-id] to project [project-id]"
-- "Move task [task-id] to the inbox"
-- "Transfer task [task-id] to project 'Website Redesign'"
+### 3.2 Create Main Test Project _(create_project)_
 
-Bulk Updates
+```
+Create a new project called 'Sequential Test Project' in the Test Projects folder
+```
 
-- "Update all tasks in project [project-id] to be due next week"
-- "Flag all tasks containing 'urgent'"
-- "Complete all tasks tagged with 'quick-wins'"
+_Note the project ID returned_
 
-🗂️ Project Management
+### 3.3 Create Secondary Project _(create_project)_
 
-Project Creation
+```
+Create a project 'Workflow Testing' with status set to active
+```
 
-- "Create a new project called 'Website Redesign'"
-- "Add a project 'Q4 Marketing Campaign'"
-- "Create a project 'Home Renovation' in folder [folder-id]"
-- "Create an on-hold project 'Future Ideas'"
+_Note the project ID returned_
 
-Project Updates
+### 3.4 Create Support Project _(create_project)_
 
-- "Update project [project-id] status to on-hold"
-- "Change project [project-id] name to 'Updated Project Name'"
-- "Set project [project-id] due date to end of month"
-- "Mark project [project-id] as completed"
+```
+Add a project 'Archive Testing' with status on-hold
+```
 
-Project Operations
+_Note the project ID returned_
 
-- "Duplicate project [project-id] with all tasks"
-- "Move project [project-id] to folder [folder-id]"
-- "Create a folder called 'Work Projects'"
+---
 
-🏷️ Tag Management
+## Phase 4: Tag Creation & Management
 
-Tag Creation & Assignment
+### 4.1 Create Primary Tags _(create_tag)_
 
-- "Create a tag called 'urgent'"
-- "Add a tag 'waiting-for'"
-- "Create a nested tag 'work-meetings' under 'work'"
+```
+Create a tag called 'test-workflow'
+```
 
-Tag Operations
+### 4.2 Create Secondary Tags _(create_tag)_
 
-- "Assign tag 'urgent' to task [task-id]"
-- "Remove tag 'completed' from task [task-id]"
-- "Tag task [task-id] with 'high-priority' and 'client-work'"
-- "Show me all tasks tagged with 'urgent'"
-- "Get all items with tag 'work'"
+```
+Create tags: 'urgent', 'waiting-for', and 'quick-win'
+```
 
-🗑️ Deletion Operations
+### 4.3 Create Nested Tag _(create_tag)_
 
-Task Deletion
+```
+Create a nested tag 'test-subtag' under 'test-workflow'
+```
 
-- "Delete task [task-id]" (will ask for confirmation)
-- "Archive task [task-id]"
-- "Permanently delete these tasks: [task-id1], [task-id2], [task-id3]"
+---
 
-📅 Date & Scheduling
+## Phase 5: Task Creation Workflow
 
-Natural Language Date Parsing
+### 5.1 Basic Task Creation _(create_task_in_project)_
 
-- "Parse this date: 'next Monday at 2pm'"
-- "What date is 'end of next month'?"
-- "Convert 'in 3 weeks' to a specific date"
-- "Parse 'tomorrow morning'"
+```
+Create a task called 'Test Task Alpha' in the Sequential Test Project
+```
 
-Optimal Scheduling
+_Note the task ID returned_
 
-- "Schedule these tasks optimally across this week: [list of task-ids]"
-- "Reschedule all my overdue tasks to next week"
-- "Distribute my pending tasks evenly over the next 2 weeks"
+### 5.2 Task with Properties _(create_task_in_project)_
 
-Bulk Date Adjustments
+```
+Create a flagged task 'Test Task Beta' with note 'This is a test task with properties' due tomorrow in the Sequential Test Project
+```
 
-- "Move all tasks due this week to next week"
-- "Adjust all project deadlines by 1 week"
-- "Reschedule all tasks in project [project-id] to start next Monday"
+_Note the task ID returned_
 
-🔧 System Operations
+### 5.3 Task with Estimation _(create_task_in_project)_
 
-Diagnostics
+```
+Create a task 'Test Task Gamma' estimated at 60 minutes due next Friday in the Sequential Test Project
+```
 
-- "Run the connection diagnostic"
-- "Check the OmniFocus connection status"
-- "Diagnose any connection issues"
+_Note the task ID returned_
 
-Database Information
+### 5.4 Subtask Creation _(create_subtask)_
 
-- "Get OmniFocus database information"
-- "Show me database statistics"
+```
+Create a subtask 'Subtask Alpha' under Test Task Alpha
+```
 
-🔗 Complex Workflow Examples
+_Note the subtask ID returned_
 
-Project Setup Workflow
+### 5.5 Inbox Task _(create_task)_
 
-1. "Create a project called 'Launch New Product'"
-2. "Create tasks in that project: 'Market research', 'Product design', 'Development', 'Testing', 'Marketing'"
-3. "Set the market research task due next Friday"
-4. "Tag all tasks with 'product-launch'"
-5. "Flag the development task as high priority"
+```
+Create a task 'Inbox Test Task' with note 'Testing inbox functionality'
+```
 
-Weekly Planning Workflow
+_Note the task ID returned_
 
-1. "Show me all tasks due this week"
-2. "Create a task 'Weekly planning session' due Monday"
-3. "Reschedule any overdue tasks to appropriate dates"
-4. "Flag the three most important tasks"
+### 5.6 Bulk Task Creation _(batch_create_tasks)_
 
-Project Review Workflow
+```
+Create multiple tasks in Sequential Test Project: 'Bulk Task 1', 'Bulk Task 2', 'Bulk Task 3'
+```
 
-1. "Get all tasks in project [project-id]"
-2. "Show me completed vs remaining tasks"
-3. "Update project status based on progress"
-4. "Create follow-up tasks for next phase"
+_Note all task IDs returned_
 
-🧪 Edge Cases & Error Handling
+---
 
-Error Scenarios
+## Phase 6: Task Updates & Modifications
 
-- "Get task with ID 'nonexistent-id'"
-- "Update a task that doesn't exist"
-- "Create a task in a nonexistent project"
-- "Delete a task without confirmation"
+### 6.1 Basic Property Updates _(update_task)_
 
-Boundary Testing
+```
+Update Test Task Alpha to be flagged and add note 'Updated during testing'
+```
 
-- "Create a task with a very long name: [very long string]"
-- "Set a task due date to a past date"
-- "Create 50 tasks at once"
+### 6.2 Date Updates _(update_task)_
+
+```
+Change Test Task Beta due date to next Monday
+```
+
+### 6.3 Status Updates _(complete_task)_
+
+```
+Mark Test Task Gamma as completed
+```
+
+### 6.4 Tag Assignment _(assign_tags)_
+
+```
+Assign tags 'test-workflow' and 'urgent' to Test Task Alpha
+```
+
+### 6.5 Task Movement _(move_task)_
+
+```
+Move Inbox Test Task to the Sequential Test Project
+```
+
+### 6.6 Multiple Tag Operations _(assign_tags, remove_tags)_
+
+```
+Tag Test Task Beta with 'waiting-for' and remove any 'urgent' tag if present
+```
+
+---
+
+## Phase 7: Advanced Search & Retrieval
+
+### 7.1 Project Task Retrieval _(get_project_tasks)_
+
+```
+Get all tasks in the Sequential Test Project
+```
+
+### 7.2 Search by Name _(search_tasks)_
+
+```
+Search for tasks containing 'Test Task'
+```
+
+### 7.3 Search by Tag _(search_tasks)_
+
+```
+Find all tasks tagged with 'test-workflow'
+```
+
+### 7.4 Search by Status _(search_tasks)_
+
+```
+Search for all flagged tasks
+```
+
+### 7.5 Search by Date _(search_tasks)_
+
+```
+Get all tasks due this week
+```
+
+### 7.6 Advanced Filter Search _(search_tasks)_
+
+```
+Search for incomplete tasks in Sequential Test Project that are flagged
+```
+
+### 7.7 Task by ID Lookup _(get_task_by_id)_
+
+```
+Get details for Test Task Alpha by its ID
+```
+
+### 7.8 Project by ID Lookup _(get_project_by_id)_
+
+```
+Show me the Sequential Test Project details by its ID
+```
+
+---
+
+## Phase 8: Bulk Operations
+
+### 8.1 Bulk Tag Assignment _(assign_tags)_
+
+```
+Assign tag 'quick-win' to all tasks in Sequential Test Project
+```
+
+### 8.2 Bulk Date Updates _(bulk_update_tasks)_
+
+```
+Update all incomplete tasks in Sequential Test Project to be due next week
+```
+
+### 8.3 Bulk Status Changes _(bulk_update_tasks)_
+
+```
+Flag all tasks containing 'Bulk Task' in the name
+```
+
+---
+
+## Phase 9: Date & Scheduling Operations
+
+### 9.1 Natural Date Parsing _(parse_natural_date)_
+
+```
+Parse this date: 'next Monday at 2pm'
+```
+
+### 9.2 Multiple Date Parsing _(parse_natural_date)_
+
+```
+Convert these dates: 'end of next month', 'in 3 weeks', 'tomorrow morning'
+```
+
+### 9.3 Optimal Task Scheduling _(schedule_tasks_optimally)_
+
+```
+Schedule all incomplete tasks in Sequential Test Project optimally across the next 2 weeks
+```
+
+### 9.4 Bulk Date Adjustments _(adjust_dates_bulk)_
+
+```
+Move all tasks due this week in Sequential Test Project to next week
+```
+
+---
+
+## Phase 10: Project Management Operations
+
+### 10.1 Project Updates _(update_project)_
+
+```
+Update Workflow Testing project name to 'Updated Workflow Testing' and set due date to end of month
+```
+
+### 10.2 Project Duplication _(duplicate_project)_
+
+```
+Duplicate Sequential Test Project with all tasks
+```
+
+_Note the new project ID_
+
+### 10.3 Project Status Changes _(update_project)_
+
+```
+Mark Archive Testing project as completed
+```
+
+### 10.4 Project Movement _(move_project)_
+
+```
+Move the duplicated project to the Test Projects folder
+```
+
+---
+
+## Phase 11: Advanced Task Operations
+
+### 11.1 Task Completion Workflow _(complete_task, create_task_in_project)_
+
+```
+Complete Test Task Alpha and create a follow-up task 'Follow-up Alpha' in the same project
+```
+
+### 11.2 Task Uncomplete _(uncomplete_task)_
+
+```
+Mark Test Task Gamma as incomplete again
+```
+
+### 11.3 Task Movement Between Projects _(move_task)_
+
+```
+Move one of the bulk tasks to the Workflow Testing project
+```
+
+---
+
+## Phase 12: Tag Operations & Analysis
+
+### 12.1 Tagged Items Retrieval _(get_tagged_items)_
+
+```
+Get all items tagged with 'test-workflow'
+```
+
+### 12.2 Tag Removal Operations _(remove_tags)_
+
+```
+Remove tag 'urgent' from Test Task Alpha
+```
+
+### 12.3 Cross-Project Tag Analysis _(get_tagged_items)_
+
+```
+Show me all tasks and projects tagged with 'quick-win'
+```
+
+---
+
+## Phase 13: Complex Workflow Testing
+
+### 13.1 Weekly Planning Simulation _(create_task, assign_tags)_
+
+```
+Create a task 'Weekly Planning Session' due next Monday, then flag it and tag it with 'urgent'
+```
+
+### 13.2 Project Review Simulation _(get_project_tasks, create_task)_
+
+```
+Get all tasks in Sequential Test Project, count completed vs remaining, and create a task 'Project Review Complete'
+```
+
+### 13.3 Multi-Project Analysis _(search_tasks)_
+
+```
+Search for all tasks across all test projects and show completion statistics
+```
+
+---
+
+## Phase 14: Archive & Cleanup Operations
+
+### 14.1 Task Archive Testing _(archive_task)_
+
+```
+Archive the completed Test Task Gamma
+```
+
+### 14.2 Selective Task Deletion _(delete_task)_
+
+```
+Delete one of the bulk tasks (with confirmation)
+```
+
+### 14.3 Project Cleanup Preparation _(complete_task)_
+
+```
+Complete all remaining incomplete tasks in the Archive Testing project
+```
+
+---
+
+## Phase 15: Edge Cases & Error Handling
+
+### 15.1 Invalid ID Testing _(get_task_by_id)_
+
+```
+Try to get task with ID 'nonexistent-task-id'
+```
+
+### 15.2 Invalid Date Testing _(create_task)_
+
+```
+Try to create a task 'Invalid Date Task' due 'yesterday'
+```
+
+### 15.3 Long Name Testing _(create_task)_
+
+```
+Create a task with a very long name: 'This is an extremely long task name that tests the system limits and ensures proper handling of extended text input that might exceed normal boundaries and could potentially cause issues with display or storage mechanisms'
+```
+
+### 15.4 Boundary Testing _(batch_create_tasks)_
+
+```
+Try to create 25 tasks at once with names 'Boundary Test 1' through 'Boundary Test 25'
+```
+
+### 15.5 Deletion Without Confirmation _(delete_task)_
+
+```
+Try to delete a task without setting confirm to true
+```
+
+---
+
+## Phase 16: Performance & Pagination Testing
+
+### 16.1 Large Dataset Retrieval _(get_all_tasks)_
+
+```
+Get all tasks with limit 50 and offset 0
+```
+
+### 16.2 Pagination Testing _(get_all_tasks)_
+
+```
+Get tasks with limit 10 and offset 10 to test pagination
+```
+
+### 16.3 Large Project Task Retrieval _(get_project_tasks)_
+
+```
+Get all tasks in the project with the most tasks, using pagination if needed
+```
+
+---
+
+## Phase 17: Bulk Delete Operations
+
+### 17.1 Bulk Task Deletion _(bulk_delete_tasks)_
+
+```
+Delete multiple test tasks at once with confirmation
+```
+
+### 17.2 Archive Multiple Tasks _(archive_task)_
+
+```
+Archive all remaining test tasks one by one
+```
+
+---
+
+## Phase 18: Final Cleanup & Verification
+
+### 18.1 Project Completion _(update_project)_
+
+```
+Mark Sequential Test Project as completed
+```
+
+### 18.2 Final Status Check _(get_database_info)_
+
+```
+Get updated database statistics and verify all test operations completed successfully
+```
+
+### 18.3 Test Cleanup _(delete_task, update_project)_
+
+```
+Clean up all test projects and verify system state
+```
+
+---
+
+## Expected Results Summary
+
+After completing this test sequence, you should have tested:
+
+✅ **All 36 MCP Tools Covered:**
+
+- **Task Creation (4/4):** create_task, create_task_in_project, batch_create_tasks, create_subtask
+- **Task Updates (5/5):** update_task, complete_task, uncomplete_task, move_task, bulk_update_tasks
+- **Task Deletion (3/3):** delete_task, archive_task, bulk_delete_tasks
+- **Project Management (5/5):** create_project, update_project, duplicate_project, create_folder, move_project
+- **Tag Management (4/4):** create_tag, assign_tags, remove_tags, get_tagged_items
+- **Read/Query (10/10):** get_all_tasks, get_task_by_id, search_tasks, get_all_projects, get_project_by_id, get_all_tags, get_all_folders, get_perspectives, get_database_info, get_project_tasks, diagnose_connection
+- **Date/Scheduling (3/3):** parse_natural_date, schedule_tasks_optimally, adjust_dates_bulk
+
+✅ **Tested Core Features:**
+
+- Database connection and diagnostics
+- Project, folder, and tag creation
+- Task CRUD operations (Create, Read, Update, Delete)
+- Bulk operations and batch processing
+- Search and filtering capabilities
+- Natural language date parsing
+- Optimal task scheduling
+- Error handling for invalid inputs
+- Pagination with large datasets
+- Real-world workflow patterns
+
+This comprehensive test script exercises all 36 MCP tools available in the Focus Pocus server while maintaining a logical, sequential flow that builds realistic test data for thorough validation.

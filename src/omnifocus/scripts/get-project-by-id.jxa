@@ -27,18 +27,8 @@
       return JSON.stringify(null);
     }
     
+    // Return project data - use try-catch for each property to handle conversion errors
     const projectData = {
-      id: project.id(),
-      name: project.name(),
-      note: project.note() || null,
-      status: project.status(),
-      creationDate: project.creationDate().toISOString(),
-      modificationDate: project.modificationDate().toISOString(),
-      completionDate: project.completionDate() ? project.completionDate().toISOString() : null,
-      dueDate: project.dueDate() ? project.dueDate().toISOString() : null,
-      deferDate: project.deferDate() ? project.deferDate().toISOString() : null,
-      estimatedMinutes: project.estimatedMinutes() || null,
-      flagged: project.flagged(),
       tags: [],
       folderId: null,
       taskCount: 0,
@@ -47,40 +37,77 @@
       nextTaskId: null
     };
     
-    // Get tags
-    const projectTags = project.tags();
-    if (projectTags && projectTags.length > 0) {
-      for (let j = 0; j < projectTags.length; j++) {
-        projectData.tags.push(projectTags[j].name());
-      }
-    }
+    // Safe property access for core properties
+    try { projectData.id = project.id; } catch (e) { projectData.id = null; }
+    try { projectData.name = project.name; } catch (e) { projectData.name = 'Unknown Project'; }
+    try { projectData.note = project.note || null; } catch (e) { projectData.note = null; }
+    try { projectData.status = project.status; } catch (e) { projectData.status = 'active'; }
+    try { projectData.creationDate = project.creationDate ? project.creationDate.toISOString() : null; } catch (e) { projectData.creationDate = null; }
+    try { projectData.modificationDate = project.modificationDate ? project.modificationDate.toISOString() : null; } catch (e) { projectData.modificationDate = null; }
+    try { projectData.completionDate = project.completionDate ? project.completionDate.toISOString() : null; } catch (e) { projectData.completionDate = null; }
+    try { projectData.dueDate = project.dueDate ? project.dueDate.toISOString() : null; } catch (e) { projectData.dueDate = null; }
+    try { projectData.deferDate = project.deferDate ? project.deferDate.toISOString() : null; } catch (e) { projectData.deferDate = null; }
+    try { projectData.estimatedMinutes = project.estimatedMinutes || null; } catch (e) { projectData.estimatedMinutes = null; }
+    try { projectData.flagged = project.flagged; } catch (e) { projectData.flagged = false; }
     
-    // Get containing folder
-    const containingFolder = project.folder();
-    if (containingFolder) {
-      projectData.folderId = containingFolder.id();
-    }
-    
-    // Get task counts
-    const tasks = project.tasks();
-    if (tasks) {
-      projectData.taskCount = tasks.length;
-      
-      let completedCount = 0;
-      for (let k = 0; k < tasks.length; k++) {
-        if (tasks[k].completed()) {
-          completedCount++;
+    // Get tags safely
+    try {
+      const projectTags = project.tags;
+      if (projectTags && projectTags.length > 0) {
+        for (let j = 0; j < projectTags.length; j++) {
+          try {
+            projectData.tags.push(projectTags[j].name);
+          } catch (e) {
+            // Skip this tag if conversion fails
+          }
         }
       }
-      
-      projectData.completedTaskCount = completedCount;
-      projectData.remainingTaskCount = projectData.taskCount - completedCount;
+    } catch (e) {
+      // Tags not accessible
     }
     
-    // Get next task
-    const nextTask = project.nextTask();
-    if (nextTask) {
-      projectData.nextTaskId = nextTask.id();
+    // Get containing folder safely
+    try {
+      const containingFolder = project.folder;
+      if (containingFolder && containingFolder.id) {
+        projectData.folderId = containingFolder.id;
+      }
+    } catch (e) {
+      // Folder not accessible
+    }
+    
+    // Get task counts safely
+    try {
+      const tasks = project.tasks;
+      if (tasks) {
+        projectData.taskCount = tasks.length;
+        
+        let completedCount = 0;
+        for (let k = 0; k < tasks.length; k++) {
+          try {
+            if (tasks[k].completed) {
+              completedCount++;
+            }
+          } catch (e) {
+            // Skip this task if completion status fails
+          }
+        }
+        
+        projectData.completedTaskCount = completedCount;
+        projectData.remainingTaskCount = projectData.taskCount - completedCount;
+      }
+    } catch (e) {
+      // Task counts not accessible
+    }
+    
+    // Get next task safely
+    try {
+      const nextTask = project.nextTask;
+      if (nextTask && nextTask.id) {
+        projectData.nextTaskId = nextTask.id;
+      }
+    } catch (e) {
+      // Next task not accessible
     }
     
     return JSON.stringify(projectData);

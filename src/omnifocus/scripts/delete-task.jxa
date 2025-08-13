@@ -20,7 +20,7 @@
     let task = null;
     try {
       task = doc.flattenedTasks.byId(taskId);
-      if (!task || !task.id()) {
+      if (!task || !task.id) {
         throw new Error('Task not found');
       }
     } catch (e) {
@@ -31,14 +31,16 @@
       });
     }
     
-    // Get task details before deletion
-    const taskName = task.name();
+    // Get task details before deletion with safe property access
+    let taskName = 'Unknown Task';
     let projectId = null;
     
+    try { taskName = task.name; } catch (e) { taskName = 'Unknown Task'; }
+    
     try {
-      const container = task.assignedContainer();
+      const container = task.assignedContainer;
       if (container) {
-        projectId = container.id();
+        try { projectId = container.id; } catch (e) { }
       }
     } catch (e) {
       // Container might not exist or be accessible

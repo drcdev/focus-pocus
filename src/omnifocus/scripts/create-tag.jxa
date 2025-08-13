@@ -26,7 +26,7 @@
       // Create as child of parent tag
       try {
         const parentTag = doc.flattenedTags.byId(parentTagId);
-        if (!parentTag || !parentTag.id()) {
+        if (!parentTag || !parentTag.id) {
           throw new Error('Parent tag not found');
         }
         newTag = parentTag.tags.push(app.Tag(tagProps));
@@ -42,13 +42,34 @@
       newTag = doc.tags.push(app.Tag(tagProps));
     }
     
-    // Return tag data
+    // Return tag data - use try-catch for each property to handle conversion errors
     const result = {
-      id: newTag.id(),
-      name: newTag.name(),
-      available: newTag.available(),
-      allowsNextAction: newTag.allowsNextAction()
+      id: null,
+      name: name, // Use the original name as fallback
+      available: true,
+      allowsNextAction: true
     };
+    
+    // Try to get actual properties but keep fallbacks
+    try { 
+      const tagId = newTag.id;
+      if (tagId) result.id = tagId;
+    } catch (e) { /* Use fallback */ }
+    
+    try { 
+      const tagName = newTag.name;
+      if (tagName) result.name = tagName;
+    } catch (e) { /* Use fallback */ }
+    
+    try { 
+      const available = newTag.available;
+      if (available !== undefined) result.available = available;
+    } catch (e) { /* Use fallback */ }
+    
+    try { 
+      const allowsNextAction = newTag.allowsNextAction;
+      if (allowsNextAction !== undefined) result.allowsNextAction = allowsNextAction;
+    } catch (e) { /* Use fallback */ }
     
     return JSON.stringify(result);
     

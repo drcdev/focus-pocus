@@ -36,35 +36,43 @@
           continue;
         }
         
-        // Build minimal task data for performance - only essential fields
-        const taskData = {
-          id: task.id(),
-          name: task.name(),
-          completed: task.completed(),
-          flagged: task.flagged()
-        };
+        // Build minimal task data for performance - safe property access
+        const taskData = {};
+        
+        try { taskData.id = task.id; } catch (e) { taskData.id = null; }
+        try { taskData.name = task.name; } catch (e) { taskData.name = 'Unknown Task'; }
+        try { taskData.completed = task.completed; } catch (e) { taskData.completed = false; }
+        try { taskData.flagged = task.flagged; } catch (e) { taskData.flagged = false; }
         
         // Only add optional fields if they exist (reduce JXA calls)
-        const dueDate = task.dueDate();
-        if (dueDate) {
-          taskData.dueDate = dueDate.toISOString();
-        }
+        try {
+          const dueDate = task.dueDate;
+          if (dueDate) {
+            taskData.dueDate = dueDate.toISOString();
+          }
+        } catch (e) { /* Skip due date if conversion fails */ }
         
-        const deferDate = task.deferDate();
-        if (deferDate) {
-          taskData.deferDate = deferDate.toISOString();
-        }
+        try {
+          const deferDate = task.deferDate;
+          if (deferDate) {
+            taskData.deferDate = deferDate.toISOString();
+          }
+        } catch (e) { /* Skip defer date if conversion fails */ }
         
-        const estimatedMinutes = task.estimatedMinutes();
-        if (estimatedMinutes) {
-          taskData.estimatedMinutes = estimatedMinutes;
-        }
+        try {
+          const estimatedMinutes = task.estimatedMinutes;
+          if (estimatedMinutes) {
+            taskData.estimatedMinutes = estimatedMinutes;
+          }
+        } catch (e) { /* Skip estimated minutes if conversion fails */ }
         
         // Get project ID only if task has a containing project
-        const containingProject = task.containingProject();
-        if (containingProject) {
-          taskData.projectId = containingProject.id();
-        }
+        try {
+          const containingProject = task.containingProject;
+          if (containingProject) {
+            try { taskData.projectId = containingProject.id; } catch (e) { /* Skip project ID if conversion fails */ }
+          }
+        } catch (e) { /* Skip project info if conversion fails */ }
         
         tasks.push(taskData);
         processedCount++;

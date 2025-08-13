@@ -76,11 +76,24 @@ class OmniFocusMCPServer {
   }
 
   async start() {
-    // Initialize OmniFocus connection
+    // Initialize OmniFocus connection with detailed feedback
+    console.error('Initializing OmniFocus connection...');
     const connected = await this.client.initialize();
-    if (!connected) {
-      console.error('Warning: Could not establish initial connection to OmniFocus');
-      console.error('Server will still start, but tools may fail until connection is established');
+    
+    if (connected) {
+      console.error('✓ OmniFocus connection established successfully');
+    } else {
+      const status = this.client.getConnectionStatus();
+      console.error('✗ Warning: Could not establish initial connection to OmniFocus');
+      console.error(`  Reason: ${status.error || 'Unknown error'}`);
+      console.error('  Server will still start, but tools may fail until connection is established');
+      
+      if (!status.appRunning) {
+        console.error('  Hint: Make sure OmniFocus 4 is running');
+      }
+      if (!status.permissionsGranted) {
+        console.error('  Hint: Check System Preferences > Security & Privacy > Automation');
+      }
     }
 
     const transport = new StdioServerTransport();

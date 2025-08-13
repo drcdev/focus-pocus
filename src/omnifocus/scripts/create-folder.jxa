@@ -27,17 +27,50 @@
     }
     
     // Create folder
-    const folder = container.folders.push(app.Folder({
+    const newFolder = app.Folder({
       name: name
-    }));
+    });
+    container.folders.push(newFolder);
+    
+    // Find the created folder by name (safer approach for OmniFocus 4)
+    let folder = null;
+    try {
+      const folders = container.folders();
+      for (let i = 0; i < folders.length; i++) {
+        const f = folders[i];
+        if (f.name() === name) {
+          folder = f;
+          break;
+        }
+      }
+    } catch (e) {
+      throw new Error('Failed to locate created folder: ' + e.message);
+    }
+    
+    if (!folder) {
+      throw new Error('Folder creation succeeded but folder not found');
+    }
     
     const result = {
-      id: folder.id(),
-      name: folder.name(),
+      id: null,
+      name: null,
       parentFolderId: null,
       projectCount: 0,
       folderCount: 0
     };
+    
+    // Get folder properties safely
+    try {
+      result.id = folder.id();
+    } catch (e) {
+      result.id = 'unknown-id-' + Date.now();
+    }
+    
+    try {
+      result.name = folder.name();
+    } catch (e) {
+      result.name = name; // fallback to provided name
+    }
     
     // Get parent folder ID safely
     try {

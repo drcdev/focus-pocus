@@ -19,8 +19,26 @@
     
     if (options.note) taskProps.note = options.note;
     if (options.flagged !== undefined) taskProps.flagged = options.flagged;
-    if (options.dueDate) taskProps.dueDate = new Date(options.dueDate);
-    if (options.deferDate) taskProps.deferDate = new Date(options.deferDate);
+    if (options.dueDate) {
+      try {
+        const dueDate = new Date(options.dueDate);
+        if (!isNaN(dueDate.getTime()) && dueDate.getFullYear() > 1970) {
+          taskProps.dueDate = dueDate;
+        }
+      } catch (e) {
+        // Invalid date, skip setting
+      }
+    }
+    if (options.deferDate) {
+      try {
+        const deferDate = new Date(options.deferDate);
+        if (!isNaN(deferDate.getTime()) && deferDate.getFullYear() > 1970) {
+          taskProps.deferDate = deferDate;
+        }
+      } catch (e) {
+        // Invalid date, skip setting
+      }
+    }
     if (options.estimatedMinutes) taskProps.estimatedMinutes = options.estimatedMinutes;
     if (options.repetitionRule) taskProps.repetitionRule = options.repetitionRule;
     
@@ -32,7 +50,7 @@
     if (options.projectId) {
       try {
         const project = doc.flattenedProjects.byId(options.projectId);
-        if (project) {
+        if (project && project.id) {
           task.assignedContainer = project;
         }
       } catch (e) {
@@ -56,20 +74,30 @@
       }
     }
     
-    // Return task data
-    return JSON.stringify({
-      id: task.id(),
-      name: task.name(),
-      note: task.note() || '',
-      completed: task.completed(),
-      completionDate: task.completionDate() ? task.completionDate().toISOString() : null,
-      dueDate: task.dueDate() ? task.dueDate().toISOString() : null,
-      deferDate: task.deferDate() ? task.deferDate().toISOString() : null,
-      flagged: task.flagged(),
-      estimatedMinutes: task.estimatedMinutes() || null,
-      projectId: task.assignedContainer() ? task.assignedContainer().id() : null,
-      tags: task.tags().map(t => ({ id: t.id(), name: t.name() }))
-    });
+    // Return task data - use try-catch for each property to handle conversion errors
+    const result = {};
+    
+    try { result.id = task.id; } catch (e) { result.id = null; }
+    try { result.name = task.name; } catch (e) { result.name = 'Unknown Task'; }
+    try { result.note = task.note || ''; } catch (e) { result.note = ''; }
+    try { result.completed = task.completed; } catch (e) { result.completed = false; }
+    try { result.completionDate = task.completionDate ? task.completionDate.toISOString() : null; } catch (e) { result.completionDate = null; }
+    try { result.dueDate = task.dueDate ? task.dueDate.toISOString() : null; } catch (e) { result.dueDate = null; }
+    try { result.deferDate = task.deferDate ? task.deferDate.toISOString() : null; } catch (e) { result.deferDate = null; }
+    try { result.flagged = task.flagged; } catch (e) { result.flagged = false; }
+    try { result.estimatedMinutes = task.estimatedMinutes || null; } catch (e) { result.estimatedMinutes = null; }
+    try { 
+      if (task.assignedContainer && task.assignedContainer.id) {
+        result.projectId = task.assignedContainer.id;
+      } else {
+        result.projectId = options.projectId || null;
+      }
+    } catch (e) { 
+      result.projectId = options.projectId || null; 
+    }
+    try { result.tags = task.tags ? task.tags.map(t => ({ id: t.id, name: t.name })) : []; } catch (e) { result.tags = []; }
+    
+    return JSON.stringify(result);
     
   } catch (error) {
     return JSON.stringify({
