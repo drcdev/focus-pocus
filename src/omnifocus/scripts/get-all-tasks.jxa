@@ -1,0 +1,81 @@
+(() => {
+  'use strict';
+  
+  try {
+    const app = Application('OmniFocus 4');
+    app.includeStandardAdditions = true;
+    
+    if (!app.running()) {
+      throw new Error('OmniFocus 4 is not running');
+    }
+    
+    const doc = app.defaultDocument;
+    const flattenedTasks = doc.flattenedTasks;
+    
+    const tasks = [];
+    
+    for (let i = 0; i < flattenedTasks.length; i++) {
+      const task = flattenedTasks[i];
+      
+      try {
+        const taskData = {
+          id: task.id(),
+          name: task.name(),
+          note: task.note() || null,
+          completed: task.completed(),
+          completionDate: task.completionDate() ? task.completionDate().toISOString() : null,
+          creationDate: task.creationDate().toISOString(),
+          modificationDate: task.modificationDate().toISOString(),
+          dueDate: task.dueDate() ? task.dueDate().toISOString() : null,
+          deferDate: task.deferDate() ? task.deferDate().toISOString() : null,
+          estimatedMinutes: task.estimatedMinutes() || null,
+          flagged: task.flagged(),
+          repetitionRule: task.repetitionRule() ? task.repetitionRule().toString() : null,
+          tags: [],
+          projectId: null,
+          parentTaskId: null,
+          containingProjectInfo: null
+        };
+        
+        // Get tags
+        const taskTags = task.tags();
+        if (taskTags && taskTags.length > 0) {
+          for (let j = 0; j < taskTags.length; j++) {
+            taskData.tags.push(taskTags[j].name());
+          }
+        }
+        
+        // Get containing project
+        const containingProject = task.containingProject();
+        if (containingProject) {
+          taskData.projectId = containingProject.id();
+          taskData.containingProjectInfo = {
+            id: containingProject.id(),
+            name: containingProject.name(),
+            status: containingProject.status()
+          };
+        }
+        
+        // Get parent task
+        const parentTask = task.parentTask();
+        if (parentTask) {
+          taskData.parentTaskId = parentTask.id();
+        }
+        
+        tasks.push(taskData);
+      } catch (taskError) {
+        // Skip individual task errors but continue processing
+        console.log('Error processing task:', taskError.message);
+      }
+    }
+    
+    return JSON.stringify(tasks);
+    
+  } catch (error) {
+    return JSON.stringify({
+      error: true,
+      message: error.message,
+      code: 'SCRIPT_ERROR'
+    });
+  }
+})();

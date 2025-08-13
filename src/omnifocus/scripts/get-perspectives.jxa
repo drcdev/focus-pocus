@@ -1,0 +1,68 @@
+(() => {
+  'use strict';
+  
+  try {
+    const app = Application('OmniFocus 4');
+    app.includeStandardAdditions = true;
+    
+    if (!app.running()) {
+      throw new Error('OmniFocus 4 is not running');
+    }
+    
+    const perspectives = [];
+    
+    // Add built-in perspectives
+    const builtinPerspectives = [
+      { id: 'inbox', name: 'Inbox', type: 'builtin', identifier: 'inbox' },
+      { id: 'projects', name: 'Projects', type: 'builtin', identifier: 'projects' },
+      { id: 'tags', name: 'Tags', type: 'builtin', identifier: 'tags' },
+      { id: 'forecast', name: 'Forecast', type: 'builtin', identifier: 'forecast' },
+      { id: 'flagged', name: 'Flagged', type: 'builtin', identifier: 'flagged' },
+      { id: 'review', name: 'Review', type: 'builtin', identifier: 'review' },
+      { id: 'completed', name: 'Completed', type: 'builtin', identifier: 'completed' }
+    ];
+    
+    perspectives.push(...builtinPerspectives);
+    
+    // Try to get custom perspectives (Pro feature)
+    try {
+      const doc = app.defaultDocument;
+      
+      // Note: Custom perspectives access may vary by OmniFocus version
+      // This is a basic attempt - actual implementation may need adjustment
+      if (doc.perspectives) {
+        const customPerspectives = doc.perspectives();
+        
+        for (let i = 0; i < customPerspectives.length; i++) {
+          const perspective = customPerspectives[i];
+          
+          try {
+            const perspectiveData = {
+              id: perspective.id(),
+              name: perspective.name(),
+              type: 'custom',
+              identifier: perspective.identifier ? perspective.identifier() : null
+            };
+            
+            perspectives.push(perspectiveData);
+          } catch (perspectiveError) {
+            // Skip individual perspective errors
+            console.log('Error processing custom perspective:', perspectiveError.message);
+          }
+        }
+      }
+    } catch (customPerspectiveError) {
+      // Custom perspectives not available (Standard edition) or other error
+      console.log('Custom perspectives not available:', customPerspectiveError.message);
+    }
+    
+    return JSON.stringify(perspectives);
+    
+  } catch (error) {
+    return JSON.stringify({
+      error: true,
+      message: error.message,
+      code: 'SCRIPT_ERROR'
+    });
+  }
+})();

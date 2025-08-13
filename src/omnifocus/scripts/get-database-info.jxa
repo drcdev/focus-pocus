@@ -1,0 +1,29 @@
+(() => {
+  'use strict';
+  
+  try {
+    const app = Application('OmniFocus 4');
+    app.includeStandardAdditions = true;
+    
+    if (!app.running()) {
+      throw new Error('OmniFocus 4 is not running');
+    }
+    
+    const doc = app.defaultDocument;
+    
+    const databaseInfo = {
+      name: doc.name() || 'OmniFocus Database',
+      path: doc.file() ? doc.file().toString() : 'Unknown',
+      isDefault: true
+    };
+    
+    return JSON.stringify(databaseInfo);
+    
+  } catch (error) {
+    return JSON.stringify({
+      error: true,
+      message: error.message,
+      code: 'SCRIPT_ERROR'
+    });
+  }
+})();

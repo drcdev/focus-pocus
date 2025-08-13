@@ -1,0 +1,65 @@
+(() => {
+  'use strict';
+  
+  try {
+    const app = Application('OmniFocus 4');
+    app.includeStandardAdditions = true;
+    
+    if (!app.running()) {
+      throw new Error('OmniFocus 4 is not running');
+    }
+    
+    const doc = app.defaultDocument;
+    const flattenedFolders = doc.flattenedFolders;
+    
+    const folders = [];
+    
+    for (let i = 0; i < flattenedFolders.length; i++) {
+      const folder = flattenedFolders[i];
+      
+      try {
+        const folderData = {
+          id: folder.id(),
+          name: folder.name(),
+          parentFolderId: null,
+          creationDate: folder.creationDate().toISOString(),
+          modificationDate: folder.modificationDate().toISOString(),
+          projectCount: 0,
+          subfolderCount: 0
+        };
+        
+        // Get parent folder
+        const parentFolder = folder.container();
+        if (parentFolder && parentFolder.constructor.name === 'Folder') {
+          folderData.parentFolderId = parentFolder.id();
+        }
+        
+        // Count projects in this folder
+        const projects = folder.projects();
+        if (projects) {
+          folderData.projectCount = projects.length;
+        }
+        
+        // Count subfolders
+        const subfolders = folder.folders();
+        if (subfolders) {
+          folderData.subfolderCount = subfolders.length;
+        }
+        
+        folders.push(folderData);
+      } catch (folderError) {
+        // Skip individual folder errors but continue processing
+        console.log('Error processing folder:', folderError.message);
+      }
+    }
+    
+    return JSON.stringify(folders);
+    
+  } catch (error) {
+    return JSON.stringify({
+      error: true,
+      message: error.message,
+      code: 'SCRIPT_ERROR'
+    });
+  }
+})();
