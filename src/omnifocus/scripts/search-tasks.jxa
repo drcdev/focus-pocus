@@ -2,11 +2,11 @@
   'use strict';
   
   try {
-    const app = Application('OmniFocus 4');
+    const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
     
     if (!app.running()) {
-      throw new Error('OmniFocus 4 is not running');
+      throw new Error('OmniFocus is not running');
     }
     
     const options = {

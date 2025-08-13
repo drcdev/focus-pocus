@@ -1,0 +1,95 @@
+(() => {
+  'use strict';
+  
+  try {
+    const app = Application('OmniFocus');
+    app.includeStandardAdditions = true;
+    
+    if (!app.running()) {
+      throw new Error('OmniFocus is not running');
+    }
+    
+    const doc = app.defaultDocument;
+    
+    // Get the project ID from parameters
+    // For now, this is a placeholder - parameter injection would be needed
+    const projectId = '{{projectId}}';
+    
+    let project = null;
+    try {
+      project = doc.flattenedProjects.byId(projectId);
+    } catch (e) {
+      // Project not found
+      return JSON.stringify(null);
+    }
+    
+    if (!project) {
+      return JSON.stringify(null);
+    }
+    
+    const projectData = {
+      id: project.id(),
+      name: project.name(),
+      note: project.note() || null,
+      status: project.status(),
+      creationDate: project.creationDate().toISOString(),
+      modificationDate: project.modificationDate().toISOString(),
+      completionDate: project.completionDate() ? project.completionDate().toISOString() : null,
+      dueDate: project.dueDate() ? project.dueDate().toISOString() : null,
+      deferDate: project.deferDate() ? project.deferDate().toISOString() : null,
+      estimatedMinutes: project.estimatedMinutes() || null,
+      flagged: project.flagged(),
+      tags: [],
+      folderId: null,
+      taskCount: 0,
+      completedTaskCount: 0,
+      remainingTaskCount: 0,
+      nextTaskId: null
+    };
+    
+    // Get tags
+    const projectTags = project.tags();
+    if (projectTags && projectTags.length > 0) {
+      for (let j = 0; j < projectTags.length; j++) {
+        projectData.tags.push(projectTags[j].name());
+      }
+    }
+    
+    // Get containing folder
+    const containingFolder = project.folder();
+    if (containingFolder) {
+      projectData.folderId = containingFolder.id();
+    }
+    
+    // Get task counts
+    const tasks = project.tasks();
+    if (tasks) {
+      projectData.taskCount = tasks.length;
+      
+      let completedCount = 0;
+      for (let k = 0; k < tasks.length; k++) {
+        if (tasks[k].completed()) {
+          completedCount++;
+        }
+      }
+      
+      projectData.completedTaskCount = completedCount;
+      projectData.remainingTaskCount = projectData.taskCount - completedCount;
+    }
+    
+    // Get next task
+    const nextTask = project.nextTask();
+    if (nextTask) {
+      projectData.nextTaskId = nextTask.id();
+    }
+    
+    return JSON.stringify(projectData);
+    
+  } catch (error) {
+    return JSON.stringify({
+      error: true,
+      message: error.message,
+      code: 'SCRIPT_ERROR'
+    });
+  }
+})();

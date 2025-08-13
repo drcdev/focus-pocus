@@ -58,7 +58,7 @@ export class OmniFocusClient {
 
       const appAvailable = await JXABridge.checkOmniFocusAvailability();
       if (!appAvailable) {
-        this.connectionStatus.error = 'OmniFocus 4 is not running';
+        this.connectionStatus.error = 'OmniFocus is not running';
         return false;
       }
 
@@ -90,7 +90,7 @@ export class OmniFocusClient {
           appRunning: false,
           permissionsGranted: false,
           lastChecked: new Date(),
-          error: 'OmniFocus 4 is not running'
+          error: 'OmniFocus is not running'
         };
       }
     } catch (error: any) {
@@ -307,6 +307,38 @@ export class OmniFocusClient {
       clearInterval(this.connectionCheckTimer);
       this.connectionCheckTimer = undefined;
     }
+  }
+
+  // Direct JXA script execution method for Phase 2 tools
+  async executeJXA(script: string): Promise<any> {
+    return this.withRetry(async () => {
+      // Use direct execSync approach that we know works
+      const { execSync } = await import('child_process');
+      const result = execSync(`osascript -l JavaScript -e "${this.escapeJXAScript(script)}"`, {
+        encoding: 'utf8',
+        timeout: 10000
+      });
+      
+      // Try to parse as JSON if it looks like JSON
+      const trimmed = result.trim();
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        try {
+          return JSON.parse(trimmed);
+        } catch {
+          return trimmed;
+        }
+      }
+      
+      return trimmed;
+    });
+  }
+  
+  private escapeJXAScript(script: string): string {
+    return script
+      .replace(/\\/g, '\\\\')
+      .replace(/"/g, '\\"')
+      .replace(/\n/g, '\\n')
+      .replace(/\r/g, '\\r');
   }
 
   public destroy(): void {

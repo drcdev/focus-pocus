@@ -130,3 +130,95 @@ export interface OmniFocusDatabase {
   path: string;
   isDefault: boolean;
 }
+
+// Phase 2 Additional Types
+
+export interface CreateTaskOptions {
+  name: string;
+  note?: string;
+  projectId?: string;
+  tags?: string[];
+  dueDate?: Date;
+  deferDate?: Date;
+  flagged?: boolean;
+  estimatedMinutes?: number;
+}
+
+export interface BatchCreateTaskOptions {
+  tasks: CreateTaskOptions[];
+  projectId?: string;
+}
+
+export interface UpdateTaskOptions {
+  name?: string;
+  note?: string;
+  projectId?: string;
+  tags?: string[];
+  dueDate?: Date | null;
+  deferDate?: Date | null;
+  flagged?: boolean;
+  estimatedMinutes?: number | null;
+}
+
+export interface CreateProjectOptions {
+  name: string;
+  note?: string;
+  folderId?: string;
+  status?: ProjectStatus;
+  sequential?: boolean;
+  flagged?: boolean;
+  dueDate?: Date;
+  deferDate?: Date;
+  tags?: string[];
+  estimatedMinutes?: number;
+  completionDate?: Date;
+  reviewInterval?: {
+    unit: 'day' | 'week' | 'month' | 'year';
+    steps: number;
+  };
+}
+
+export interface UpdateProjectOptions {
+  name?: string;
+  note?: string;
+  status?: ProjectStatus;
+  sequential?: boolean;
+  flagged?: boolean;
+  dueDate?: Date | null;
+  deferDate?: Date | null;
+  tags?: string[];
+  estimatedMinutes?: number | null;
+  reviewInterval?: {
+    unit: 'day' | 'week' | 'month' | 'year';
+    steps: number;
+  };
+}
+
+// Updated interfaces to match actual implementations - extending original interfaces
+export interface TaskExtended extends Omit<Task, 'completionDate' | 'creationDate' | 'modificationDate' | 'dueDate' | 'deferDate' | 'tags'> {
+  completionDate: string | null;
+  dueDate: string | null;
+  deferDate: string | null;
+  tags: Array<{ id: string; name: string }>;
+}
+
+export interface ProjectExtended extends Omit<Project, 'creationDate' | 'modificationDate' | 'completionDate' | 'dueDate' | 'deferDate' | 'tags' | 'completedTaskCount' | 'remainingTaskCount' | 'nextTaskId'> {
+  dueDate: string | null;
+  deferDate: string | null;
+  completionDate: string | null;
+  sequential: boolean;
+  availableTaskCount: number;
+  tags: Array<{ id: string; name: string }>;
+}
+
+export interface TagExtended extends Omit<Tag, 'allowsNextAction' | 'active' | 'creationDate' | 'modificationDate' | 'usedCount'> {
+  availableTaskCount: number;
+  remainingTaskCount: number;
+  children?: TagExtended[];
+  isContext?: boolean;
+}
+
+export interface FolderExtended extends Omit<Folder, 'creationDate' | 'modificationDate' | 'subfolderCount'> {
+  folderCount: number;
+  children?: FolderExtended[];
+}

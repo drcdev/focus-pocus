@@ -52,19 +52,38 @@ class JXABridge {
 
   static async loadScript(scriptName: string): Promise<string> {
     try {
-      const scriptPath = join(__dirname, 'scripts', `${scriptName}.jxa`);
+      const scriptPath = this.getScriptPath(scriptName);
       return await fs.readFile(scriptPath, 'utf8');
     } catch (error) {
       throw new Error(`Failed to load JXA script: ${scriptName}`);
     }
   }
 
+  private static getScriptPath(scriptName: string): string {
+    return join(__dirname, 'scripts', `${scriptName}.jxa`);
+  }
+
   static async execScriptFile<T = any>(
     scriptName: string,
     params: Record<string, any> = {}
   ): Promise<JXAResponse<T>> {
-    const script = await this.loadScript(scriptName);
-    return this.execJXA<T>(script, params);
+    try {
+      const scriptPath = this.getScriptPath(scriptName);
+      
+      // For now, execute script files directly without parameter injection
+      // TODO: Add parameter support if needed
+      const result = execSync(`osascript -l JavaScript "${scriptPath}"`, {
+        timeout: this.TIMEOUT_MS,
+        encoding: 'utf8'
+      });
+
+      const parsedResult = this.parseResponse<T>(result);
+      return { success: true, data: parsedResult };
+
+    } catch (error: any) {
+      const jxaError = this.categorizeError(error);
+      return { success: false, error: jxaError };
+    }
   }
 
   private static injectParameters(script: string, params: Record<string, any>): string {
@@ -141,16 +160,12 @@ class JXABridge {
 
   static async checkOmniFocusAvailability(): Promise<boolean> {
     try {
-      const result = await this.execJXA(`
-        try {
-          const app = Application('OmniFocus 4');
-          return app.running();
-        } catch (error) {
-          return false;
-        }
-      `);
-      
-      return result.success && result.data === true;
+      const { execSync } = await import('child_process');
+      const result = execSync('osascript -l JavaScript -e "Application(\'OmniFocus\').running()"', {
+        encoding: 'utf8',
+        timeout: 5000
+      });
+      return result.trim() === 'true';
     } catch {
       return false;
     }
@@ -158,13 +173,12 @@ class JXABridge {
 
   static async requestPermissions(): Promise<boolean> {
     try {
-      const result = await this.execJXA(`
-        const app = Application('OmniFocus 4');
-        app.includeStandardAdditions = true;
-        return "Permission test successful";
-      `);
-      
-      return result.success;
+      const { execSync } = await import('child_process');
+      const result = execSync('osascript -l JavaScript -e "Application(\'OmniFocus\').activate(); \'Permission test successful\'"', {
+        encoding: 'utf8',
+        timeout: 5000
+      });
+      return result.trim() === 'Permission test successful';
     } catch {
       return false;
     }

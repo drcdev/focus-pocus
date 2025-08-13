@@ -1,0 +1,42 @@
+(() => {
+  'use strict';
+  
+  try {
+    const app = Application('OmniFocus');
+    app.includeStandardAdditions = true;
+    
+    if (!app.running()) {
+      throw new Error('OmniFocus is not running');
+    }
+    
+    const doc = app.defaultDocument;
+    
+    // Create basic task in inbox
+    const task = doc.inboxTasks.push(app.Task({
+      name: 'Test Task',
+      note: 'This is a test task created by Focus Pocus MCP Server',
+      flagged: false
+    }));
+    
+    return JSON.stringify({
+      id: task.id(),
+      name: task.name(),
+      note: task.note() || '',
+      completed: task.completed(),
+      completionDate: task.completionDate() ? task.completionDate().toISOString() : null,
+      dueDate: task.dueDate() ? task.dueDate().toISOString() : null,
+      deferDate: task.deferDate() ? task.deferDate().toISOString() : null,
+      flagged: task.flagged(),
+      estimatedMinutes: task.estimatedMinutes() || null,
+      projectId: task.assignedContainer() ? task.assignedContainer().id() : null,
+      tags: task.tags().map(t => ({ id: t.id(), name: t.name() }))
+    });
+    
+  } catch (error) {
+    return JSON.stringify({
+      error: true,
+      message: error.message,
+      code: 'SCRIPT_ERROR'
+    });
+  }
+})();

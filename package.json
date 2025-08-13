@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npm run copy-scripts",
+    "copy-scripts": "mkdir -p dist/omnifocus/scripts && cp src/omnifocus/scripts/*.jxa dist/omnifocus/scripts/",
     "dev": "tsx src/index.ts",
     "test": "jest",
     "clean": "rm -rf dist",
@@ -22,6 +23,8 @@
     "@modelcontextprotocol/sdk": "^1.17.2",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.2.1",
+    "date-fns": "^3.6.0",
+    "date-fns-tz": "^3.1.3",
     "jest": "^30.0.5",
     "tsx": "^4.20.4",
     "typescript": "^5.9.2"

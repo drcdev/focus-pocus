@@ -149,6 +149,11 @@ export class CacheManager {
     return this.invalidateByPattern(/^(getAllProjects|getProjectById):/);
   }
 
+  // Invalidate entries by pattern (alias for invalidateByPattern for convenience)
+  invalidate(pattern: string | RegExp): number {
+    return this.invalidateByPattern(pattern);
+  }
+
   // Invalidate all cache entries
   invalidateAll(): void {
     this.clear();
