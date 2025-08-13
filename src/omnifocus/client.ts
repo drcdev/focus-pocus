@@ -141,11 +141,22 @@ export class OmniFocusClient {
   async searchTasks(options: SearchOptions): Promise<Task[]> {
     return this.withCache('searchTasks', options, async () => {
       return this.withRetry(async () => {
-        const result = await JXABridge.execScriptFile<Task[]>('search-tasks', options);
+        // Convert legacy tagIds array to single tagId for native search
+        const searchOptions = { ...options };
+        if (options.tagIds && options.tagIds.length > 0) {
+          searchOptions.tagId = options.tagIds[0]; // Use first tag for now
+          delete searchOptions.tagIds;
+        }
+        
+        // Use native search exclusively for maximum performance
+        const result = await JXABridge.execScriptFile<any>('search-tasks-native', searchOptions);
+        
         if (!result.success) {
           throw new Error(result.error?.originalMessage || 'Failed to search tasks');
         }
-        return result.data || [];
+        
+        // Native search returns direct array or .results property
+        return result.data?.results || result.data || [];
       });
     });
   }

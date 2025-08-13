@@ -392,17 +392,22 @@ export class MCPToolRegistry {
       },
       {
         name: 'search_tasks',
-        description: 'Search tasks with filters',
+        description: 'Search tasks using native OmniFocus filtering with comprehensive criteria support',
         inputSchema: {
           type: 'object',
           properties: {
-            query: { type: 'string', description: 'Search query (optional)' },
-            projectId: { type: 'string', description: 'Filter by project ID' },
-            tagId: { type: 'string', description: 'Filter by tag ID' },
+            query: { type: 'string', description: 'Text search in task names and notes' },
+            projectId: { type: 'string', description: 'Filter by specific project ID' },
+            tagId: { type: 'string', description: 'Filter by specific tag ID' },
             status: { type: 'string', enum: ['available', 'completed', 'dropped', 'all'], description: 'Task status filter' },
+            completed: { type: 'boolean', description: 'Filter by completion status' },
             flagged: { type: 'boolean', description: 'Filter by flagged status' },
-            startDate: { type: 'string', description: 'Filter tasks after this date' },
-            endDate: { type: 'string', description: 'Filter tasks before this date' }
+            dueBefore: { type: 'string', description: 'Filter tasks due before this date (ISO format)' },
+            dueAfter: { type: 'string', description: 'Filter tasks due after this date (ISO format)' },
+            createdBefore: { type: 'string', description: 'Filter tasks created before this date (ISO format)' },
+            createdAfter: { type: 'string', description: 'Filter tasks created after this date (ISO format)' },
+            limit: { type: 'number', description: 'Maximum number of results (default: 25)' },
+            offset: { type: 'number', description: 'Number of results to skip (default: 0)' }
           }
         }
       },

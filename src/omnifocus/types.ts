@@ -104,7 +104,9 @@ export interface SearchOptions {
   query?: string;
   projectId?: string;
   folderId?: string;
-  tagIds?: string[];
+  tagId?: string;
+  tagIds?: string[]; // Legacy support, will use first tagId
+  status?: 'available' | 'completed' | 'dropped' | 'all';
   completed?: boolean;
   flagged?: boolean;
   dueBefore?: Date;

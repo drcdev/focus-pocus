@@ -1,0 +1,198 @@
+(() => {
+  'use strict';
+  
+  try {
+    const app = Application('OmniFocus');
+    app.includeStandardAdditions = true;
+    
+    if (!app.running()) {
+      throw new Error('OmniFocus is not running');
+    }
+    
+    const options = {
+      query: {{query}} || null,
+      projectId: {{projectId}} || null,
+      tagId: {{tagId}} || null,
+      completed: {{completed}} !== undefined ? {{completed}} : null,
+      flagged: {{flagged}} !== undefined ? {{flagged}} : null,
+      status: {{status}} || null,
+      dueBefore: {{dueBefore}} ? new Date({{dueBefore}}) : null,
+      dueAfter: {{dueAfter}} ? new Date({{dueAfter}}) : null,
+      createdBefore: {{createdBefore}} ? new Date({{createdBefore}}) : null,
+      createdAfter: {{createdAfter}} ? new Date({{createdAfter}}) : null,
+      limit: {{limit}} || 25,
+      offset: {{offset}} || 0
+    };
+    
+    const doc = app.defaultDocument;
+    
+    // Build native filter object for maximum OmniFocus performance
+    let filterObj = {};
+    
+    // Text search in name
+    if (options.query) {
+      filterObj.name = {_contains: options.query};
+    }
+    
+    // Completion status
+    if (options.completed !== null) {
+      filterObj.completed = options.completed;
+    }
+    
+    // Status enum handling
+    if (options.status) {
+      switch (options.status) {
+        case 'available':
+          filterObj.completed = false;
+          filterObj.dropped = false;
+          break;
+        case 'completed':
+          filterObj.completed = true;
+          break;
+        case 'dropped':
+          filterObj.dropped = true;
+          break;
+      }
+    }
+    
+    // Flagged status
+    if (options.flagged !== null) {
+      filterObj.flagged = options.flagged;
+    }
+    
+    // Date filters (native comparison)
+    if (options.dueBefore) {
+      filterObj.dueDate = {_lt: options.dueBefore};
+    } else if (options.dueAfter) {
+      filterObj.dueDate = {_gt: options.dueAfter};
+    }
+    
+    if (options.createdBefore) {
+      filterObj.creationDate = {_lt: options.createdBefore};
+    } else if (options.createdAfter) {
+      filterObj.creationDate = {_gt: options.createdAfter};
+    }
+    
+    // Get filtered tasks using native OmniFocus filtering
+    let filteredTasks;
+    
+    if (options.projectId) {
+      // Search within specific project
+      const projects = doc.flattenedProjects();
+      let targetProject = null;
+      
+      for (let i = 0; i < projects.length; i++) {
+        try {
+          if (projects[i].id() === options.projectId) {
+            targetProject = projects[i];
+            break;
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+      
+      if (!targetProject) {
+        return JSON.stringify([]);
+      }
+      
+      filteredTasks = Object.keys(filterObj).length > 0 
+        ? targetProject.flattenedTasks.whose(filterObj)
+        : targetProject.flattenedTasks();
+    } else {
+      // Search all tasks
+      filteredTasks = Object.keys(filterObj).length > 0 
+        ? doc.flattenedTasks.whose(filterObj)
+        : doc.flattenedTasks();
+    }
+    
+    // Apply pagination and extract minimal data for maximum speed
+    const startIndex = options.offset;
+    const endIndex = Math.min(startIndex + options.limit, filteredTasks.length);
+    const results = [];
+    
+    for (let i = startIndex; i < endIndex; i++) {
+      const task = filteredTasks[i];
+      
+      try {
+        // Only extract essential data to minimize JXA overhead
+        const taskData = {
+          id: task.id(),
+          name: task.name(),
+          completed: task.completed(),
+          flagged: task.flagged(),
+          tags: [],
+          projectId: null,
+          note: null,
+          dueDate: null
+        };
+        
+        // Add optional data only if needed/accessible
+        try { taskData.note = task.note() || null; } catch (e) { }
+        try { 
+          const dueDate = task.dueDate();
+          taskData.dueDate = dueDate ? dueDate.toISOString() : null;
+        } catch (e) { }
+        
+        // Project info (only if not already filtered by project)
+        if (!options.projectId) {
+          try {
+            const containingProject = task.containingProject();
+            if (containingProject) {
+              taskData.projectId = containingProject.id();
+            }
+          } catch (e) { }
+        } else {
+          taskData.projectId = options.projectId;
+        }
+        
+        // Tags (limited for performance)
+        try {
+          const taskTags = task.tags();
+          if (taskTags && taskTags.length > 0) {
+            for (let j = 0; j < Math.min(taskTags.length, 3); j++) {
+              try {
+                taskData.tags.push(taskTags[j].name());
+              } catch (e) { }
+            }
+          }
+        } catch (e) { }
+        
+        // Tag filtering (if specified) - after data extraction to minimize checks
+        if (options.tagId) {
+          let hasTag = false;
+          try {
+            const taskTags = task.tags();
+            if (taskTags && taskTags.length > 0) {
+              for (let j = 0; j < taskTags.length; j++) {
+                if (taskTags[j].id() === options.tagId) {
+                  hasTag = true;
+                  break;
+                }
+              }
+            }
+          } catch (e) { }
+          
+          if (!hasTag) {
+            continue;
+          }
+        }
+        
+        results.push(taskData);
+        
+      } catch (e) {
+        // Skip tasks that can't be processed
+        continue;
+      }
+    }
+    
+    return JSON.stringify(results);
+    
+  } catch (error) {
+    return JSON.stringify({
+      error: true,
+      message: error.message,
+      code: 'SCRIPT_ERROR'
+    });
+  }
+})();
