@@ -1,6 +1,33 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // OmniFocus 4 requires function call syntax for property access
+      const value = obj[prop]();
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      // Fallback to direct property access for compatibility
+      try {
+        const directValue = obj[prop];
+        return directValue !== undefined ? directValue : defaultValue;
+      } catch (e2) {
+        return defaultValue;
+      }
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -19,29 +46,29 @@
       
       try {
         const folderData = {
-          id: folder.id(),
-          name: folder.name(),
+          id: safeGet(folder, 'id'),
+          name: safeGet(folder, 'name'),
           parentFolderId: null,
-          creationDate: folder.creationDate().toISOString(),
-          modificationDate: folder.modificationDate().toISOString(),
+          creationDate: safeDate(safeGet(folder, 'creationDate')),
+          modificationDate: safeDate(safeGet(folder, 'modificationDate')),
           projectCount: 0,
           subfolderCount: 0
         };
         
         // Get parent folder
-        const parentFolder = folder.container();
+        const parentFolder = safeGet(folder, 'container');
         if (parentFolder && parentFolder.constructor.name === 'Folder') {
-          folderData.parentFolderId = parentFolder.id();
+          folderData.parentFolderId = safeGet(parentFolder, 'id');
         }
         
         // Count projects in this folder
-        const projects = folder.projects();
+        const projects = safeGet(folder, 'projects');
         if (projects) {
           folderData.projectCount = projects.length;
         }
         
         // Count subfolders
-        const subfolders = folder.folders();
+        const subfolders = safeGet(folder, 'folders');
         if (subfolders) {
           folderData.subfolderCount = subfolders.length;
         }

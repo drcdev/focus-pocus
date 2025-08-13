@@ -70,10 +70,10 @@ export interface Perspective {
 }
 
 export enum ProjectStatus {
-  Active = 'active',
-  OnHold = 'on-hold', 
-  Completed = 'completed',
-  Dropped = 'dropped'
+  Active = 'active status',
+  OnHold = 'on hold status',
+  Completed = 'done status',
+  Dropped = 'dropped status'
 }
 
 export interface TaskCreationParams {

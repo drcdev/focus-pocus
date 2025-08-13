@@ -1,6 +1,27 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // Direct property access is faster and more reliable in OmniFocus 4
+      const value = obj[prop];
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -20,8 +41,10 @@
     // Create tag properties
     const tagProps = { name: name };
     
-    // Create the tag
-    let newTag;
+    // Create tag using proper JXA syntax
+    const newTag = app.Tag(tagProps);
+    
+    // Add to appropriate container
     if (parentTagId) {
       // Create as child of parent tag
       try {
@@ -29,7 +52,7 @@
         if (!parentTag || !parentTag.id) {
           throw new Error('Parent tag not found');
         }
-        newTag = parentTag.tags.push(app.Tag(tagProps));
+        parentTag.tags.push(newTag);
       } catch (e) {
         return JSON.stringify({
           error: true,
@@ -39,7 +62,7 @@
       }
     } else {
       // Create as root tag
-      newTag = doc.tags.push(app.Tag(tagProps));
+      doc.tags.push(newTag);
     }
     
     // Return tag data - use try-catch for each property to handle conversion errors
@@ -55,25 +78,21 @@
       const tagId = newTag.id();
       if (tagId) result.id = tagId;
     } catch (e) { 
-      // If id() fails, try accessing as property
-      try {
-        const tagId = newTag.id;
-        if (tagId) result.id = tagId;
-      } catch (e2) { /* Use fallback */ }
+      result.id = null;
     }
     
     try { 
-      const tagName = newTag.name;
+      const tagName = newTag.name();
       if (tagName) result.name = tagName;
     } catch (e) { /* Use fallback */ }
     
     try { 
-      const available = newTag.available;
+      const available = newTag.available();
       if (available !== undefined) result.available = available;
     } catch (e) { /* Use fallback */ }
     
     try { 
-      const allowsNextAction = newTag.allowsNextAction;
+      const allowsNextAction = newTag.allowsNextAction();
       if (allowsNextAction !== undefined) result.allowsNextAction = allowsNextAction;
     } catch (e) { /* Use fallback */ }
     

@@ -1,6 +1,27 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // Direct property access is faster and more reliable in OmniFocus 4
+      const value = obj[prop];
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -18,17 +39,32 @@
     
     const doc = app.defaultDocument;
     
-    // Find the task
+    // Find the task - with retry for newly created tasks
     let task = null;
-    try {
-      task = doc.flattenedTasks.byId(taskId);
-      if (!task || !task.id) {
-        throw new Error('Task not found');
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (attempts < maxAttempts && !task) {
+      try {
+        task = doc.flattenedTasks.byId(taskId);
+        if (task && task.id()) {
+          break; // Found the task
+        }
+      } catch (e) {
+        // Task not found, may need to wait for sync
       }
-    } catch (e) {
+      
+      attempts++;
+      if (attempts < maxAttempts) {
+        // Wait 500ms before retry
+        app.delay(0.5);
+      }
+    }
+    
+    if (!task) {
       return JSON.stringify({
         error: true,
-        message: 'Task not found',
+        message: `Task not found after ${maxAttempts} attempts: ${taskId}`,
         code: 'NOT_FOUND'
       });
     }
@@ -38,31 +74,100 @@
       // Move to inbox
       task.assignedContainer = null;
     } else {
-      // Move to specific project
-      try {
-        const targetProject = doc.flattenedProjects.byId(targetProjectId);
-        if (!targetProject) {
-          throw new Error(`Target project not found: ${targetProjectId}`);
-        }
-        
-        // Verify project has valid ID
-        let projectId = null;
+      // Move to specific project - with retry for newly created projects
+      let targetProject = null;
+      let projectAttempts = 0;
+      const maxProjectAttempts = 3;
+      
+      while (projectAttempts < maxProjectAttempts && !targetProject) {
         try {
-          projectId = targetProject.id;
+          targetProject = doc.flattenedProjects.byId(targetProjectId);
+          if (targetProject && targetProject.id()) {
+            break; // Found the project
+          }
         } catch (e) {
-          throw new Error(`Target project ID not accessible: ${targetProjectId}`);
+          // Project not found, may need to wait for sync
         }
         
-        if (!projectId) {
-          throw new Error(`Target project has no ID: ${targetProjectId}`);
+        projectAttempts++;
+        if (projectAttempts < maxProjectAttempts) {
+          // Wait 500ms before retry
+          app.delay(0.5);
         }
-        
-        task.assignedContainer = targetProject;
+      }
+      
+      if (!targetProject) {
+        return JSON.stringify({
+          error: true,
+          message: `Target project not found after ${maxProjectAttempts} attempts: ${targetProjectId}`,
+          code: 'NOT_FOUND'
+        });
+      }
+      
+      // Verify project has valid ID
+      let projectId = null;
+      try {
+        projectId = targetProject.id();
       } catch (e) {
         return JSON.stringify({
           error: true,
-          message: e.message,
+          message: `Target project ID not accessible: ${targetProjectId}`,
           code: 'NOT_FOUND'
+        });
+      }
+      
+      if (!projectId) {
+        return JSON.stringify({
+          error: true,
+          message: `Target project has no ID: ${targetProjectId}`,
+          code: 'NOT_FOUND'
+        });
+      }
+      
+      try {
+        // Check if task is currently in inbox
+        const isInboxTask = task.inInbox ? task.inInbox() : false;
+        
+        if (isInboxTask) {
+          // For inbox tasks, we need to recreate as project task
+          const taskProps = {
+            name: task.name(),
+            note: task.note() || '',
+            flagged: task.flagged(),
+            completed: task.completed()
+          };
+          
+          // Copy optional properties if they exist
+          try { if (task.dueDate()) taskProps.dueDate = task.dueDate(); } catch (e) {}
+          try { if (task.deferDate()) taskProps.deferDate = task.deferDate(); } catch (e) {}
+          try { if (task.estimatedMinutes()) taskProps.estimatedMinutes = task.estimatedMinutes(); } catch (e) {}
+          
+          // Create new task in project
+          const newTask = app.Task(taskProps);
+          targetProject.tasks.push(newTask);
+          
+          // Copy tags
+          try {
+            const taskTags = task.tags();
+            if (taskTags && taskTags.length > 0) {
+              app.add(taskTags, { to: newTask.tags });
+            }
+          } catch (e) {}
+          
+          // Delete original task
+          task.delete();
+          
+          // Update task reference for return data
+          task = newTask;
+        } else {
+          // For regular tasks, assignedContainer should work
+          task.assignedContainer = targetProject;
+        }
+      } catch (e) {
+        return JSON.stringify({
+          error: true,
+          message: `Failed to move task to project: ${e.message}`,
+          code: 'SCRIPT_ERROR'
         });
       }
     }
@@ -75,26 +180,26 @@
       containingProjectInfo: null
     };
     
-    try { result.id = task.id; } catch (e) { result.id = null; }
-    try { result.name = task.name; } catch (e) { result.name = 'Unknown Task'; }
-    try { result.note = task.note || null; } catch (e) { result.note = null; }
-    try { result.completed = task.completed; } catch (e) { result.completed = false; }
-    try { result.completionDate = task.completionDate ? task.completionDate.toISOString() : null; } catch (e) { result.completionDate = null; }
-    try { result.creationDate = task.creationDate ? task.creationDate.toISOString() : null; } catch (e) { result.creationDate = null; }
-    try { result.modificationDate = task.modificationDate ? task.modificationDate.toISOString() : null; } catch (e) { result.modificationDate = null; }
-    try { result.dueDate = task.dueDate ? task.dueDate.toISOString() : null; } catch (e) { result.dueDate = null; }
-    try { result.deferDate = task.deferDate ? task.deferDate.toISOString() : null; } catch (e) { result.deferDate = null; }
-    try { result.estimatedMinutes = task.estimatedMinutes || null; } catch (e) { result.estimatedMinutes = null; }
-    try { result.flagged = task.flagged; } catch (e) { result.flagged = false; }
-    try { result.repetitionRule = task.repetitionRule ? task.repetitionRule.toString() : null; } catch (e) { result.repetitionRule = null; }
+    try { result.id = task.id(); } catch (e) { result.id = null; }
+    try { result.name = task.name(); } catch (e) { result.name = 'Unknown Task'; }
+    try { result.note = task.note() || null; } catch (e) { result.note = null; }
+    try { result.completed = task.completed(); } catch (e) { result.completed = false; }
+    try { result.completionDate = task.completionDate() ? task.completionDate().toISOString() : null; } catch (e) { result.completionDate = null; }
+    try { result.creationDate = task.creationDate() ? task.creationDate().toISOString() : null; } catch (e) { result.creationDate = null; }
+    try { result.modificationDate = task.modificationDate() ? task.modificationDate().toISOString() : null; } catch (e) { result.modificationDate = null; }
+    try { result.dueDate = task.dueDate() ? task.dueDate().toISOString() : null; } catch (e) { result.dueDate = null; }
+    try { result.deferDate = task.deferDate() ? task.deferDate().toISOString() : null; } catch (e) { result.deferDate = null; }
+    try { result.estimatedMinutes = task.estimatedMinutes() || null; } catch (e) { result.estimatedMinutes = null; }
+    try { result.flagged = task.flagged(); } catch (e) { result.flagged = false; }
+    try { result.repetitionRule = task.repetitionRule() ? task.repetitionRule().toString() : null; } catch (e) { result.repetitionRule = null; }
     
     // Get tags
     try {
-      const taskTags = task.tags;
+      const taskTags = task.tags();
       if (taskTags && taskTags.length > 0) {
         for (let j = 0; j < taskTags.length; j++) {
           try {
-            result.tags.push(taskTags[j].name);
+            result.tags.push(taskTags[j].name());
           } catch (e) {
             // Skip this tag if conversion fails
           }
@@ -106,14 +211,14 @@
     
     // Get containing project
     try {
-      const containingProject = task.containingProject;
+      const containingProject = task.containingProject();
       if (containingProject) {
-        try { result.projectId = containingProject.id; } catch (e) { }
+        try { result.projectId = containingProject.id(); } catch (e) { }
         try {
           result.containingProjectInfo = {
-            id: containingProject.id,
-            name: containingProject.name,
-            status: containingProject.status
+            id: containingProject.id(),
+            name: containingProject.name(),
+            status: containingProject.status()
           };
         } catch (e) {
           // Project info might not be accessible

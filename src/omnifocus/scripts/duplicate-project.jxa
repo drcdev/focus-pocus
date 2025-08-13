@@ -1,6 +1,27 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // Direct property access is faster and more reliable in OmniFocus 4
+      const value = obj[prop];
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -46,7 +67,13 @@
     try { projectData.sequential = sourceProject.sequential(); } catch (e) {}
     try { projectData.estimatedMinutes = sourceProject.estimatedMinutes(); } catch (e) {}
     
-    const newProject = container.projects.push(app.Project(projectData));
+    // Create project using proper JXA syntax
+    const newProject = app.Project(projectData);
+    container.projects.push(newProject);
+    
+    if (!newProject) {
+      throw new Error('Failed to locate newly created project');
+    }
     
     // Copy tags
     try {
@@ -71,7 +98,13 @@
             try { taskData.deferDate = sourceTask.deferDate(); } catch (e) {}
             try { taskData.estimatedMinutes = sourceTask.estimatedMinutes(); } catch (e) {}
             
-            const newTask = targetContainer.tasks.push(app.Task(taskData));
+            // Create task using proper JXA syntax
+            const newTask = app.Task(taskData);
+            targetContainer.tasks.push(newTask);
+            
+            if (!newTask) {
+              return null; // Skip if we can't find the task
+            }
             
             // Copy tags
             try {

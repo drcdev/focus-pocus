@@ -2,11 +2,15 @@ import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { CreateTaskTool } from '../src/tools/create-task';
 import { OmniFocusClient } from '../src/omnifocus/client';
 import { CacheManager } from '../src/cache/cache-manager';
+import { JXABridge } from '../src/omnifocus/jxa-bridge';
 import { CreateTaskOptions } from '../src/omnifocus/types';
 
 // Mock dependencies
 jest.mock('../src/omnifocus/client');
 jest.mock('../src/cache/cache-manager');
+jest.mock('../src/omnifocus/jxa-bridge');
+
+const mockJXABridge = jest.mocked(JXABridge);
 
 describe('CreateTaskTool', () => {
   let createTaskTool: CreateTaskTool;
@@ -16,10 +20,7 @@ describe('CreateTaskTool', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     
-    mockClient = {
-      executeJXA: jest.fn(),
-      searchTasks: jest.fn()
-    } as any;
+    mockClient = {} as any;
 
     mockCache = {
       invalidate: jest.fn(),
@@ -45,7 +46,10 @@ describe('CreateTaskTool', () => {
         tags: []
       };
 
-      mockClient.executeJXA.mockResolvedValue(mockTaskResult);
+      mockJXABridge.execScriptFile.mockResolvedValue({
+        success: true,
+        data: mockTaskResult
+      });
 
       const options: CreateTaskOptions = {
         name: 'Test Task'
@@ -54,9 +58,9 @@ describe('CreateTaskTool', () => {
       const result = await createTaskTool.createTask(options);
 
       expect(result).toEqual(mockTaskResult);
-      expect(mockClient.executeJXA).toHaveBeenCalledWith(
-        expect.stringContaining('Test Task')
-      );
+      expect(mockJXABridge.execScriptFile).toHaveBeenCalledWith('create-task', {
+        options: { name: 'Test Task' }
+      });
       expect(mockCache.invalidate).toHaveBeenCalledWith('tasks:*');
     });
 
@@ -78,7 +82,10 @@ describe('CreateTaskTool', () => {
         tags: [{ id: 'tag-1', name: 'urgent' }]
       };
 
-      mockClient.executeJXA.mockResolvedValue(mockTaskResult);
+      mockJXABridge.execScriptFile.mockResolvedValue({
+        success: true,
+        data: mockTaskResult
+      });
 
       const options: CreateTaskOptions = {
         name: 'Complete Task',
@@ -94,15 +101,18 @@ describe('CreateTaskTool', () => {
       const result = await createTaskTool.createTask(options);
 
       expect(result).toEqual(mockTaskResult);
-      
-      // Check that the JXA script includes all properties
-      const jxaScript = mockClient.executeJXA.mock.calls[0][0] as string;
-      expect(jxaScript).toContain('Complete Task');
-      expect(jxaScript).toContain('Task description');
-      expect(jxaScript).toContain(dueDate.toISOString());
-      expect(jxaScript).toContain(deferDate.toISOString());
-      expect(jxaScript).toContain('flagged: true');
-      expect(jxaScript).toContain('estimatedMinutes: 60');
+      expect(mockJXABridge.execScriptFile).toHaveBeenCalledWith('create-task-in-project', {
+        options: {
+          name: 'Complete Task',
+          note: 'Task description',
+          dueDate: dueDate,
+          deferDate: deferDate,
+          flagged: true,
+          estimatedMinutes: 60,
+          projectId: 'project-123',
+          tags: ['tag-1']
+        }
+      });
       
       expect(mockCache.invalidate).toHaveBeenCalledWith('tasks:*');
       expect(mockCache.invalidate).toHaveBeenCalledWith('project:project-123:*');
@@ -117,7 +127,10 @@ describe('CreateTaskTool', () => {
         tags: []
       };
 
-      mockClient.executeJXA.mockResolvedValue(mockTaskResult);
+      mockJXABridge.execScriptFile.mockResolvedValue({
+        success: true,
+        data: mockTaskResult
+      });
 
       const options: CreateTaskOptions = {
         name: 'Task with "quotes" and \\backslashes'
@@ -126,18 +139,23 @@ describe('CreateTaskTool', () => {
       const result = await createTaskTool.createTask(options);
 
       expect(result).toEqual(mockTaskResult);
-      expect(mockClient.executeJXA).toHaveBeenCalled();
+      expect(mockJXABridge.execScriptFile).toHaveBeenCalledWith('create-task', {
+        options: { name: 'Task with "quotes" and \\backslashes' }
+      });
     });
 
     it('should handle task creation errors', async () => {
-      mockClient.executeJXA.mockRejectedValue(new Error('OmniFocus connection failed'));
+      mockJXABridge.execScriptFile.mockResolvedValue({
+        success: false,
+        error: { message: 'OmniFocus connection failed' }
+      });
 
       const options: CreateTaskOptions = {
         name: 'Failed Task'
       };
 
       await expect(createTaskTool.createTask(options)).rejects.toThrow(
-        'Failed to create task: OmniFocus connection failed'
+        'OmniFocus connection failed'
       );
     });
   });
@@ -151,7 +169,10 @@ describe('CreateTaskTool', () => {
         tags: []
       };
 
-      mockClient.executeJXA.mockResolvedValue(mockTaskResult);
+      mockJXABridge.execScriptFile.mockResolvedValue({
+        success: true,
+        data: mockTaskResult
+      });
 
       const result = await createTaskTool.createTaskInProject('project-456', {
         name: 'Project Task',
@@ -159,9 +180,13 @@ describe('CreateTaskTool', () => {
       });
 
       expect(result).toEqual(mockTaskResult);
-      expect(mockClient.executeJXA).toHaveBeenCalledWith(
-        expect.stringContaining('Project Task')
-      );
+      expect(mockJXABridge.execScriptFile).toHaveBeenCalledWith('create-task-in-project', {
+        options: {
+          name: 'Project Task',
+          note: 'Task in project',
+          projectId: 'project-456'
+        }
+      });
     });
   });
 
@@ -174,7 +199,10 @@ describe('CreateTaskTool', () => {
         tags: []
       };
 
-      mockClient.executeJXA.mockResolvedValue(mockSubtaskResult);
+      mockJXABridge.execScriptFile.mockResolvedValue({
+        success: true,
+        data: mockSubtaskResult
+      });
 
       const result = await createTaskTool.createSubtask('parent-task-123', {
         name: 'Subtask',
@@ -182,9 +210,13 @@ describe('CreateTaskTool', () => {
       });
 
       expect(result).toEqual(mockSubtaskResult);
-      expect(mockClient.executeJXA).toHaveBeenCalledWith(
-        expect.stringContaining('Subtask')
-      );
+      expect(mockJXABridge.execScriptFile).toHaveBeenCalledWith('create-subtask', {
+        parentTaskId: 'parent-task-123',
+        options: {
+          name: 'Subtask',
+          note: 'This is a subtask'
+        }
+      });
     });
   });
 
@@ -196,7 +228,10 @@ describe('CreateTaskTool', () => {
         { id: 'task-3', name: 'Task 3', tags: [] }
       ];
 
-      mockClient.executeJXA.mockResolvedValue(mockBatchResult);
+      mockJXABridge.execScriptFile.mockResolvedValue({
+        success: true,
+        data: mockBatchResult
+      });
 
       const tasks = [
         { name: 'Task 1', note: 'First task' },
@@ -207,12 +242,9 @@ describe('CreateTaskTool', () => {
       const result = await createTaskTool.batchCreateTasks({ tasks });
 
       expect(result).toEqual(mockBatchResult);
-      expect(mockClient.executeJXA).toHaveBeenCalled();
-      
-      const jxaScript = mockClient.executeJXA.mock.calls[0][0] as string;
-      expect(jxaScript).toContain('Task 1');
-      expect(jxaScript).toContain('Task 2');
-      expect(jxaScript).toContain('Task 3');
+      expect(mockJXABridge.execScriptFile).toHaveBeenCalledWith('batch-create-tasks', {
+        options: { tasks }
+      });
     });
 
     it('should create multiple tasks in project', async () => {
@@ -221,7 +253,10 @@ describe('CreateTaskTool', () => {
         { id: 'task-2', name: 'Task 2', projectId: 'project-123', tags: [] }
       ];
 
-      mockClient.executeJXA.mockResolvedValue(mockBatchResult);
+      mockJXABridge.execScriptFile.mockResolvedValue({
+        success: true,
+        data: mockBatchResult
+      });
 
       const tasks = [
         { name: 'Task 1' },
@@ -234,9 +269,9 @@ describe('CreateTaskTool', () => {
       });
 
       expect(result).toEqual(mockBatchResult);
-      
-      const jxaScript = mockClient.executeJXA.mock.calls[0][0] as string;
-      expect(jxaScript).toContain('project-123');
+      expect(mockJXABridge.execScriptFile).toHaveBeenCalledWith('batch-create-tasks', {
+        options: { tasks, projectId: 'project-123' }
+      });
     });
   });
 });

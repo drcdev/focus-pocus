@@ -1,6 +1,27 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // Direct property access is faster and more reliable in OmniFocus 4
+      const value = obj[prop];
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -14,7 +35,7 @@
     const doc = app.defaultDocument;
     
     const tag = doc.flattenedTags.byId(tagId);
-    if (!tag || !tag.id()) {
+    if (!tag || !safeGet(tag, 'id')) {
       throw new Error('Tag not found');
     }
     
@@ -22,30 +43,22 @@
     tag.name = newName;
     
     const result = {
-      id: tag.id(),
-      name: tag.name(),
+      id: safeGet(tag, 'id'),
+      name: safeGet(tag, 'name'),
       parentTagId: null,
       availableTaskCount: 0,
       remainingTaskCount: 0
     };
     
     // Get parent tag safely
-    try {
-      const container = tag.container();
-      if (container && container.class() === 'tag') {
-        result.parentTagId = container.id();
-      }
-    } catch (e) {
-      // Container might not exist
+    const container = safeGet(tag, 'container');
+    if (container && safeGet(container, 'class') === 'tag') {
+      result.parentTagId = safeGet(container, 'id');
     }
     
     // Get task counts safely
-    try {
-      result.availableTaskCount = tag.availableTaskCount();
-      result.remainingTaskCount = tag.remainingTaskCount();
-    } catch (e) {
-      // Task counts might fail
-    }
+    result.availableTaskCount = safeGet(tag, 'availableTaskCount', 0);
+    result.remainingTaskCount = safeGet(tag, 'remainingTaskCount', 0);
     
     return JSON.stringify(result);
     

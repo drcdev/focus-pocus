@@ -1,6 +1,27 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // Direct property access is faster and more reliable in OmniFocus 4
+      const value = obj[prop];
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -20,7 +41,7 @@
     let task = null;
     try {
       task = doc.flattenedTasks.byId(taskId);
-      if (!task || !task.id) {
+      if (!task || !safeGet(task, 'id')) {
         throw new Error('Task not found');
       }
     } catch (e) {
@@ -32,18 +53,12 @@
     }
     
     // Get task details before deletion with safe property access
-    let taskName = 'Unknown Task';
+    const taskName = safeGet(task, 'name', 'Unknown Task');
     let projectId = null;
     
-    try { taskName = task.name; } catch (e) { taskName = 'Unknown Task'; }
-    
-    try {
-      const container = task.assignedContainer;
-      if (container) {
-        try { projectId = container.id; } catch (e) { }
-      }
-    } catch (e) {
-      // Container might not exist or be accessible
+    const container = safeGet(task, 'assignedContainer');
+    if (container) {
+      projectId = safeGet(container, 'id');
     }
     
     // Delete the task

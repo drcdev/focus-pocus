@@ -1,6 +1,33 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // OmniFocus 4 requires function call syntax for property access
+      const value = obj[prop]();
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      // Fallback to direct property access for compatibility
+      try {
+        const directValue = obj[prop];
+        return directValue !== undefined ? directValue : defaultValue;
+      } catch (e2) {
+        return defaultValue;
+      }
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -19,22 +46,11 @@
       
       // Build only the most basic tag data to avoid any conversion issues
       const tagData = {
-        id: tag.id(),
-        name: tag.name()
+        id: safeGet(tag, 'id'),
+        name: safeGet(tag, 'name'),
+        active: safeGet(tag, 'active', true),
+        allowsNextAction: safeGet(tag, 'allowsNextAction', true)
       };
-      
-      // Only add optional fields that we can safely access
-      try {
-        tagData.active = tag.active();
-      } catch (e) {
-        tagData.active = true; // Default
-      }
-      
-      try {
-        tagData.allowsNextAction = tag.allowsNextAction();
-      } catch (e) {
-        tagData.allowsNextAction = true; // Default
-      }
       
       tags.push(tagData);
     }

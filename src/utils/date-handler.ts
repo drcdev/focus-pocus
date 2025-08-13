@@ -27,16 +27,62 @@ export class DateHandler {
     
     // Handle relative dates
     if (lowerInput === 'today') {
-      return startOfDay(new Date());
+      return startOfDay(baseDate);
     }
     if (lowerInput === 'tomorrow') {
-      return startOfDay(addDays(new Date(), 1));
+      return startOfDay(addDays(baseDate, 1));
     }
     if (lowerInput === 'yesterday') {
-      return startOfDay(addDays(new Date(), -1));
+      return startOfDay(addDays(baseDate, -1));
     }
     
-    // Handle "next" patterns
+    // Handle time-of-day modifiers for today/tomorrow
+    const timeOfDayMatch = lowerInput.match(/^(today|tomorrow)\s+(morning|afternoon|evening|night)$/);
+    if (timeOfDayMatch) {
+      let date = timeOfDayMatch[1] === 'today' ? baseDate : addDays(baseDate, 1);
+      const timeOfDay = timeOfDayMatch[2];
+      
+      switch (timeOfDay) {
+        case 'morning':
+          return setHours(startOfDay(date), 9); // 9 AM
+        case 'afternoon':
+          return setHours(startOfDay(date), 14); // 2 PM
+        case 'evening':
+          return setHours(startOfDay(date), 18); // 6 PM
+        case 'night':
+          return setHours(startOfDay(date), 20); // 8 PM
+      }
+    }
+    
+    // Handle "next [weekday] at [time]" patterns
+    const nextWeekdayTimeMatch = lowerInput.match(/^next\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+at\s+(\d{1,2}):?(\d{2})?\s*(am|pm)?$/);
+    if (nextWeekdayTimeMatch) {
+      const weekday = nextWeekdayTimeMatch[1];
+      let hours = parseInt(nextWeekdayTimeMatch[2]);
+      const minutes = nextWeekdayTimeMatch[3] ? parseInt(nextWeekdayTimeMatch[3]) : 0;
+      const meridiem = nextWeekdayTimeMatch[4];
+      
+      // Calculate next occurrence of weekday
+      const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const targetDay = weekdays.indexOf(weekday);
+      if (targetDay !== -1) {
+        let date = new Date(baseDate);
+        let daysToAdd = (targetDay - date.getDay() + 7) % 7;
+        if (daysToAdd === 0) daysToAdd = 7; // If today is the target day, get next week's
+        date = addDays(date, daysToAdd);
+        
+        // Set time
+        if (meridiem === 'pm' && hours < 12) hours += 12;
+        if (meridiem === 'am' && hours === 12) hours = 0;
+        if (!meridiem && hours < 8) hours += 12; // Assume PM for times before 8 without meridiem
+        
+        date = setHours(startOfDay(date), hours);
+        date = setMinutes(date, minutes);
+        return date;
+      }
+    }
+    
+    // Handle "next" patterns (simple)
     const nextMatch = lowerInput.match(/^next\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday|week|month|year)$/);
     if (nextMatch) {
       const unit = nextMatch[1];
@@ -48,18 +94,40 @@ export class DateHandler {
       const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
       const targetDay = weekdays.indexOf(unit);
       if (targetDay !== -1) {
-        let date = new Date();
+        let date = new Date(baseDate);
         let daysToAdd = (targetDay - date.getDay() + 7) % 7;
         if (daysToAdd === 0) daysToAdd = 7; // If today is the target day, get next week's
         return startOfDay(addDays(date, daysToAdd));
       }
     }
     
-    // Handle "in X days/weeks/months"
-    const inMatch = lowerInput.match(/^in\s+(\d+)\s+(day|days|week|weeks|month|months|year|years)$/);
+    // Handle "end of next [period]" patterns
+    const endOfNextMatch = lowerInput.match(/^end\s+of\s+next\s+(week|month|year)$/);
+    if (endOfNextMatch) {
+      const period = endOfNextMatch[1];
+      const today = new Date(baseDate);
+      
+      if (period === 'week') {
+        const nextWeek = addWeeks(today, 1);
+        const daysUntilSunday = 7 - nextWeek.getDay();
+        return endOfDay(addDays(nextWeek, daysUntilSunday));
+      }
+      if (period === 'month') {
+        const nextMonth = addMonths(today, 1);
+        const lastDayOfNextMonth = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0);
+        return endOfDay(lastDayOfNextMonth);
+      }
+      if (period === 'year') {
+        const nextYear = addYears(today, 1);
+        return endOfDay(new Date(nextYear.getFullYear(), 11, 31));
+      }
+    }
+    
+    // Handle "in X days/weeks/months" and "within X days/weeks/months"
+    const inMatch = lowerInput.match(/^(in|within)\s+(\d+)\s+(day|days|week|weeks|month|months|year|years)$/);
     if (inMatch) {
-      const amount = parseInt(inMatch[1]);
-      const unit = inMatch[2];
+      const amount = parseInt(inMatch[2]);
+      const unit = inMatch[3];
       
       if (unit.startsWith('day')) return addDays(baseDate, amount);
       if (unit.startsWith('week')) return addWeeks(baseDate, amount);
@@ -79,42 +147,45 @@ export class DateHandler {
       if (unit.startsWith('year')) return addYears(baseDate, amount);
     }
     
-    // Handle time-specific patterns
+    // Handle time-specific patterns for today/tomorrow
     const timeMatch = lowerInput.match(/^(today|tomorrow)\s+at\s+(\d{1,2}):?(\d{2})?\s*(am|pm)?$/);
     if (timeMatch) {
-      let date = timeMatch[1] === 'today' ? new Date() : addDays(new Date(), 1);
+      let date = timeMatch[1] === 'today' ? baseDate : addDays(baseDate, 1);
       let hours = parseInt(timeMatch[2]);
       const minutes = timeMatch[3] ? parseInt(timeMatch[3]) : 0;
       const meridiem = timeMatch[4];
       
       if (meridiem === 'pm' && hours < 12) hours += 12;
       if (meridiem === 'am' && hours === 12) hours = 0;
+      if (!meridiem && hours < 8) hours += 12; // Assume PM for times before 8 without meridiem
       
-      date = setHours(date, hours);
+      date = setHours(startOfDay(date), hours);
       date = setMinutes(date, minutes);
       return date;
     }
     
-    // Handle end of period
+    // Handle end of period (current)
     if (lowerInput === 'end of week') {
-      const date = new Date();
+      const date = new Date(baseDate);
       const daysUntilSunday = 7 - date.getDay();
       return endOfDay(addDays(date, daysUntilSunday));
     }
     if (lowerInput === 'end of month') {
-      const date = new Date();
-      const nextMonth = addMonths(date, 1);
-      nextMonth.setDate(0); // Last day of current month
-      return endOfDay(nextMonth);
+      const date = new Date(baseDate);
+      const lastDayOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+      return endOfDay(lastDayOfMonth);
     }
     if (lowerInput === 'end of year') {
-      const date = new Date();
+      const date = new Date(baseDate);
       return endOfDay(new Date(date.getFullYear(), 11, 31));
     }
     
     // Try to parse as ISO date
     try {
-      return parseISO(input);
+      const isoDate = parseISO(input);
+      if (!isNaN(isoDate.getTime())) {
+        return isoDate;
+      }
     } catch {
       // Not an ISO date
     }
@@ -132,7 +203,7 @@ export class DateHandler {
     
     for (const fmt of formats) {
       try {
-        const parsed = parse(input, fmt, new Date());
+        const parsed = parse(input, fmt, baseDate);
         if (!isNaN(parsed.getTime())) {
           return parsed;
         }

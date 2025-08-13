@@ -1,6 +1,27 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // Direct property access is faster and more reliable in OmniFocus 4
+      const value = obj[prop];
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -26,7 +47,15 @@
       project.note = updates.note;
     }
     if (updates.status !== undefined) {
-      project.status = updates.status;
+      // Handle status updates - some statuses require special methods
+      if (updates.status === 'done status') {
+        project.markComplete();
+      } else if (updates.status === 'dropped status') {
+        project.markDropped();
+      } else {
+        // Direct assignment works for 'active status' and 'on hold status'
+        project.status = updates.status;
+      }
     }
     if (updates.flagged !== undefined) {
       project.flagged = updates.flagged;
@@ -42,6 +71,26 @@
     }
     if (updates.estimatedMinutes !== undefined) {
       project.estimatedMinutes = updates.estimatedMinutes || null;
+    }
+    
+    // Update folder/container if provided
+    if (updates.folderId !== undefined) {
+      try {
+        if (updates.folderId === null || updates.folderId === 'null') {
+          // Move to root
+          project.container = doc;
+        } else {
+          // Move to specific folder
+          const targetFolder = doc.flattenedFolders.byId(updates.folderId);
+          if (targetFolder) {
+            project.container = targetFolder;
+          } else {
+            throw new Error('Target folder not found: ' + updates.folderId);
+          }
+        }
+      } catch (e) {
+        throw new Error('Failed to update project folder: ' + e.message);
+      }
     }
     
     // Update review interval if provided

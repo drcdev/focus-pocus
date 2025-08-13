@@ -1,6 +1,33 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // OmniFocus 4 requires function call syntax for property access
+      const value = obj[prop]();
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      // Fallback to direct property access for compatibility
+      try {
+        const directValue = obj[prop];
+        return directValue !== undefined ? directValue : defaultValue;
+      } catch (e2) {
+        return defaultValue;
+      }
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -27,17 +54,8 @@
       try {
         // Skip completed tasks if not requested
         if (!includeCompleted) {
-          try {
-            const isCompleted = task.completed();
-            if (isCompleted) continue;
-          } catch (e) {
-            try {
-              const isCompleted = task.completed;
-              if (isCompleted) continue;
-            } catch (e2) {
-              // If we can't determine completion status, include the task
-            }
-          }
+          const isCompleted = safeGet(task, 'completed', false);
+          if (isCompleted) continue;
         }
         
         // Apply offset
@@ -46,76 +64,38 @@
           continue;
         }
         
-        // Build minimal task data for performance - safe property access
-        const taskData = {};
-        
-        try { 
-          const taskId = task.id();
-          if (taskId) taskData.id = taskId;
-        } catch (e) { 
-          // If id() fails, try accessing as property
-          try {
-            const taskId = task.id;
-            if (taskId) taskData.id = taskId;
-          } catch (e2) { taskData.id = null; }
-        }
-        try { 
-          const taskName = task.name();
-          if (taskName) taskData.name = taskName;
-        } catch (e) { 
-          try {
-            const taskName = task.name;
-            if (taskName) taskData.name = taskName;
-          } catch (e2) { taskData.name = 'Unknown Task'; }
-        }
-        try { 
-          const isCompleted = task.completed();
-          taskData.completed = isCompleted;
-        } catch (e) { 
-          try {
-            const isCompleted = task.completed;
-            taskData.completed = isCompleted;
-          } catch (e2) { taskData.completed = false; }
-        }
-        try { 
-          const isFlagged = task.flagged();
-          taskData.flagged = isFlagged;
-        } catch (e) { 
-          try {
-            const isFlagged = task.flagged;
-            taskData.flagged = isFlagged;
-          } catch (e2) { taskData.flagged = false; }
-        }
+        // Build minimal task data for performance - using utility functions
+        const taskData = {
+          id: safeGet(task, 'id'),
+          name: safeGet(task, 'name', 'Unknown Task'),
+          completed: safeGet(task, 'completed', false),
+          flagged: safeGet(task, 'flagged', false)
+        };
         
         // Only add optional fields if they exist (reduce JXA calls)
-        try {
-          const dueDate = task.dueDate;
-          if (dueDate) {
-            taskData.dueDate = dueDate.toISOString();
-          }
-        } catch (e) { /* Skip due date if conversion fails */ }
+        const dueDate = safeGet(task, 'dueDate');
+        if (dueDate) {
+          const isoDate = safeDate(dueDate);
+          if (isoDate) taskData.dueDate = isoDate;
+        }
         
-        try {
-          const deferDate = task.deferDate;
-          if (deferDate) {
-            taskData.deferDate = deferDate.toISOString();
-          }
-        } catch (e) { /* Skip defer date if conversion fails */ }
+        const deferDate = safeGet(task, 'deferDate');
+        if (deferDate) {
+          const isoDate = safeDate(deferDate);
+          if (isoDate) taskData.deferDate = isoDate;
+        }
         
-        try {
-          const estimatedMinutes = task.estimatedMinutes;
-          if (estimatedMinutes) {
-            taskData.estimatedMinutes = estimatedMinutes;
-          }
-        } catch (e) { /* Skip estimated minutes if conversion fails */ }
+        const estimatedMinutes = safeGet(task, 'estimatedMinutes');
+        if (estimatedMinutes) {
+          taskData.estimatedMinutes = estimatedMinutes;
+        }
         
         // Get project ID only if task has a containing project
-        try {
-          const containingProject = task.containingProject;
-          if (containingProject) {
-            try { taskData.projectId = containingProject.id; } catch (e) { /* Skip project ID if conversion fails */ }
-          }
-        } catch (e) { /* Skip project info if conversion fails */ }
+        const containingProject = safeGet(task, 'containingProject');
+        if (containingProject) {
+          const projectId = safeGet(containingProject, 'id');
+          if (projectId) taskData.projectId = projectId;
+        }
         
         tasks.push(taskData);
         processedCount++;

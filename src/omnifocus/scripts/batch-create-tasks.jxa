@@ -1,6 +1,27 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // Direct property access is faster and more reliable in OmniFocus 4
+      const value = obj[prop];
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -39,12 +60,16 @@
         if (taskData.deferDate) taskProps.deferDate = new Date(taskData.deferDate);
         if (taskData.estimatedMinutes) taskProps.estimatedMinutes = taskData.estimatedMinutes;
         
-        const task = app.Task(taskProps);
-        doc.inboxTasks.push(task);
-        
-        // Assign to project if specified
+        // Create task using proper JXA syntax
+        let task;
         if (project) {
-          task.assignedContainer = project;
+          // Create task using official OmniFocus API pattern
+          task = app.Task(taskProps);
+          project.tasks.push(task);
+        } else {
+          // Create inbox task if no project specified
+          task = app.InboxTask(taskProps);
+          doc.inboxTasks.push(task);
         }
         
         // Handle tag assignment
@@ -57,6 +82,11 @@
           if (tags.length > 0) {
             task.tags = tags;
           }
+        }
+        
+        // Allow brief time for OmniFocus to sync task associations if in project
+        if (project) {
+          delay(0.05); // 50ms delay per task for synchronization
         }
         
         results.push({
@@ -72,7 +102,7 @@
           estimatedMinutes: task.estimatedMinutes() || null,
           flagged: task.flagged(),
           tags: task.tags().map(t => t.name()),
-          projectId: task.assignedContainer() ? task.assignedContainer().id() : null,
+          projectId: project ? project.id() : null,
           parentTaskId: null,
           containingProjectInfo: null
         });

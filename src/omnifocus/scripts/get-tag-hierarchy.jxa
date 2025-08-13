@@ -1,6 +1,27 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // Direct property access is faster and more reliable in OmniFocus 4
+      const value = obj[prop];
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -14,15 +35,14 @@
     function buildTagTree(container) {
       const tags = [];
       
-      try {
-        const containerTags = container.tags();
-        
+      const containerTags = safeGet(container, 'tags');
+      if (containerTags) {
         for (let i = 0; i < containerTags.length; i++) {
           const tag = containerTags[i];
           try {
             const tagData = {
-              id: tag.id(),
-              name: tag.name(),
+              id: safeGet(tag, 'id'),
+              name: safeGet(tag, 'name'),
               parentTagId: null,
               availableTaskCount: 0,
               remainingTaskCount: 0,
@@ -30,22 +50,14 @@
             };
             
             // Get parent tag safely
-            try {
-              const tagContainer = tag.container();
-              if (tagContainer && tagContainer.class() === 'tag') {
-                tagData.parentTagId = tagContainer.id();
-              }
-            } catch (e) {
-              // Container might not exist
+            const tagContainer = safeGet(tag, 'container');
+            if (tagContainer && safeGet(tagContainer, 'class') === 'tag') {
+              tagData.parentTagId = safeGet(tagContainer, 'id');
             }
             
             // Get task counts safely
-            try {
-              tagData.availableTaskCount = tag.availableTaskCount();
-              tagData.remainingTaskCount = tag.remainingTaskCount();
-            } catch (e) {
-              // Task counts might fail
-            }
+            tagData.availableTaskCount = safeGet(tag, 'availableTaskCount', 0);
+            tagData.remainingTaskCount = safeGet(tag, 'remainingTaskCount', 0);
             
             // Get children recursively
             try {
@@ -59,8 +71,6 @@
             // Skip tag if it fails to process
           }
         }
-      } catch (e) {
-        // Container tags might fail to load
       }
       
       return tags;

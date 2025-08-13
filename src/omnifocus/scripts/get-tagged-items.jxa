@@ -1,6 +1,27 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // Direct property access is faster and more reliable in OmniFocus 4
+      const value = obj[prop];
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -14,7 +35,7 @@
     const doc = app.defaultDocument;
     
     const tag = doc.flattenedTags.byId(tagId);
-    if (!tag || !tag.id()) {
+    if (!tag || !safeGet(tag, 'id')) {
       throw new Error('Tag not found');
     }
     
@@ -28,37 +49,35 @@
           const task = tasks[i];
           try {
             const taskData = {
-              id: task.id(),
-              name: task.name(),
-              note: task.note() || '',
-              completed: task.completed(),
-              completionDate: task.completionDate() ? task.completionDate().toISOString() : null,
-              dueDate: task.dueDate() ? task.dueDate().toISOString() : null,
-              deferDate: task.deferDate() ? task.deferDate().toISOString() : null,
-              flagged: task.flagged(),
-              estimatedMinutes: task.estimatedMinutes() || null,
+              id: safeGet(task, 'id'),
+              name: safeGet(task, 'name'),
+              note: safeGet(task, 'note', ''),
+              completed: safeGet(task, 'completed', false),
+              completionDate: safeDate(safeGet(task, 'completionDate')),
+              dueDate: safeDate(safeGet(task, 'dueDate')),
+              deferDate: safeDate(safeGet(task, 'deferDate')),
+              flagged: safeGet(task, 'flagged', false),
+              estimatedMinutes: safeGet(task, 'estimatedMinutes'),
               projectId: null,
               tags: []
             };
             
             // Get project ID safely
-            try {
-              const container = task.assignedContainer();
-              if (container) {
-                taskData.projectId = container.id();
-              }
-            } catch (e) {
-              // Container might not exist
+            const container = safeGet(task, 'assignedContainer');
+            if (container) {
+              taskData.projectId = safeGet(container, 'id');
             }
             
             // Get tags safely
-            try {
-              const taskTags = task.tags();
+            const taskTags = safeGet(task, 'tags');
+            if (taskTags) {
               for (let j = 0; j < taskTags.length; j++) {
-                taskData.tags.push({ id: taskTags[j].id(), name: taskTags[j].name() });
+                const tagId = safeGet(taskTags[j], 'id');
+                const tagName = safeGet(taskTags[j], 'name');
+                if (tagId && tagName) {
+                  taskData.tags.push({ id: tagId, name: tagName });
+                }
               }
-            } catch (e) {
-              // Tags might fail to load
             }
             
             result.tasks.push(taskData);
@@ -79,37 +98,37 @@
           const project = projects[i];
           try {
             const projectData = {
-              id: project.id(),
-              name: project.name(),
-              note: project.note() || '',
-              status: project.status(),
-              flagged: project.flagged(),
-              dueDate: project.dueDate() ? project.dueDate().toISOString() : null,
-              deferDate: project.deferDate() ? project.deferDate().toISOString() : null,
-              completionDate: project.completionDate() ? project.completionDate().toISOString() : null,
-              sequential: project.sequential(),
-              estimatedMinutes: project.estimatedMinutes() || null,
+              id: safeGet(project, 'id'),
+              name: safeGet(project, 'name'),
+              note: safeGet(project, 'note', ''),
+              status: safeGet(project, 'status'),
+              flagged: safeGet(project, 'flagged', false),
+              dueDate: safeDate(safeGet(project, 'dueDate')),
+              deferDate: safeDate(safeGet(project, 'deferDate')),
+              completionDate: safeDate(safeGet(project, 'completionDate')),
+              sequential: safeGet(project, 'sequential', false),
+              estimatedMinutes: safeGet(project, 'estimatedMinutes'),
               taskCount: 0,
               availableTaskCount: 0,
               tags: []
             };
             
             // Get task counts safely
-            try {
-              projectData.taskCount = project.tasks().length;
-              projectData.availableTaskCount = project.availableTasks().length;
-            } catch (e) {
-              // Task counts might fail
-            }
+            const projectTasks = safeGet(project, 'tasks');
+            const availableTasks = safeGet(project, 'availableTasks');
+            projectData.taskCount = projectTasks ? projectTasks.length : 0;
+            projectData.availableTaskCount = availableTasks ? availableTasks.length : 0;
             
             // Get tags safely
-            try {
-              const projectTags = project.tags();
+            const projectTags = safeGet(project, 'tags');
+            if (projectTags) {
               for (let j = 0; j < projectTags.length; j++) {
-                projectData.tags.push({ id: projectTags[j].id(), name: projectTags[j].name() });
+                const tagId = safeGet(projectTags[j], 'id');
+                const tagName = safeGet(projectTags[j], 'name');
+                if (tagId && tagName) {
+                  projectData.tags.push({ id: tagId, name: tagName });
+                }
               }
-            } catch (e) {
-              // Tags might fail to load
             }
             
             result.projects.push(projectData);

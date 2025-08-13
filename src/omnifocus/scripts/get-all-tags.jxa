@@ -1,6 +1,33 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // OmniFocus 4 requires function call syntax for property access
+      const value = obj[prop]();
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      // Fallback to direct property access for compatibility
+      try {
+        const directValue = obj[prop];
+        return directValue !== undefined ? directValue : defaultValue;
+      } catch (e2) {
+        return defaultValue;
+      }
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -19,37 +46,25 @@
         const tag = allTags[i];
         try {
           const tagData = {
+            id: safeGet(tag, 'id'),
+            name: safeGet(tag, 'name', 'Unknown Tag'),
             parentTagId: null,
             availableTaskCount: 0,
             remainingTaskCount: 0
           };
           
-          // Safe property access for core properties
-          try { tagData.id = tag.id; } catch (e) { tagData.id = null; }
-          try { tagData.name = tag.name; } catch (e) { tagData.name = 'Unknown Tag'; }
-          
           // Get parent tag safely
-          try {
-            const container = tag.container;
-            if (container && container.id) {
-              tagData.parentTagId = container.id;
-            }
-          } catch (e) {
-            // Container might not exist or be accessible
+          const container = safeGet(tag, 'container');
+          if (container && safeGet(container, 'id')) {
+            tagData.parentTagId = safeGet(container, 'id');
           }
           
           // Get task counts safely
-          try {
-            tagData.availableTaskCount = tag.availableTaskCount || 0;
-            tagData.remainingTaskCount = tag.remainingTaskCount || 0;
-          } catch (e) {
-            // Task counts might fail
-          }
+          tagData.availableTaskCount = safeGet(tag, 'availableTaskCount', 0);
+          tagData.remainingTaskCount = safeGet(tag, 'remainingTaskCount', 0);
           
-          // Only add tags with valid IDs
-          if (tagData.id) {
-            tags.push(tagData);
-          }
+          // Always add tags - even if property extraction fails, we want to see the issue
+          tags.push(tagData);
         } catch (e) {
           // Skip tag if it fails to process
         }

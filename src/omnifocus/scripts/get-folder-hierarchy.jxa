@@ -1,6 +1,27 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // Direct property access is faster and more reliable in OmniFocus 4
+      const value = obj[prop];
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -14,15 +35,14 @@
     function buildFolderTree(container) {
       const folders = [];
       
-      try {
-        const containerFolders = container.folders();
-        
+      const containerFolders = safeGet(container, 'folders');
+      if (containerFolders) {
         for (let i = 0; i < containerFolders.length; i++) {
           const folder = containerFolders[i];
           try {
             const folderData = {
-              id: folder.id(),
-              name: folder.name(),
+              id: safeGet(folder, 'id'),
+              name: safeGet(folder, 'name'),
               parentFolderId: null,
               projectCount: 0,
               folderCount: 0,
@@ -30,22 +50,16 @@
             };
             
             // Get parent folder safely
-            try {
-              const folderContainer = folder.container();
-              if (folderContainer && folderContainer.class() === 'folder') {
-                folderData.parentFolderId = folderContainer.id();
-              }
-            } catch (e) {
-              // Container might not exist
+            const folderContainer = safeGet(folder, 'container');
+            if (folderContainer && safeGet(folderContainer, 'class') === 'folder') {
+              folderData.parentFolderId = safeGet(folderContainer, 'id');
             }
             
             // Get counts safely
-            try {
-              folderData.projectCount = folder.projects().length;
-              folderData.folderCount = folder.folders().length;
-            } catch (e) {
-              // Counts might fail
-            }
+            const projects = safeGet(folder, 'projects');
+            const subfolders = safeGet(folder, 'folders');
+            folderData.projectCount = projects ? projects.length : 0;
+            folderData.folderCount = subfolders ? subfolders.length : 0;
             
             // Get children recursively
             try {
@@ -59,8 +73,6 @@
             // Skip folder if it fails to process
           }
         }
-      } catch (e) {
-        // Container folders might fail to load
       }
       
       return folders;

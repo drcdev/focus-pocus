@@ -1,6 +1,27 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // Direct property access is faster and more reliable in OmniFocus 4
+      const value = obj[prop];
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -22,7 +43,7 @@
     if (options.dueDate) {
       try {
         const dueDate = new Date(options.dueDate);
-        if (!isNaN(dueDate.getTime()) && dueDate.getFullYear() > 1970) {
+        if (!isNaN(dueDate.getTime())) {
           taskProps.dueDate = dueDate;
         }
       } catch (e) {
@@ -32,7 +53,7 @@
     if (options.deferDate) {
       try {
         const deferDate = new Date(options.deferDate);
-        if (!isNaN(deferDate.getTime()) && deferDate.getFullYear() > 1970) {
+        if (!isNaN(deferDate.getTime())) {
           taskProps.deferDate = deferDate;
         }
       } catch (e) {
@@ -42,20 +63,31 @@
     if (options.estimatedMinutes) taskProps.estimatedMinutes = options.estimatedMinutes;
     if (options.repetitionRule) taskProps.repetitionRule = options.repetitionRule;
     
-    // Create the task
-    const task = app.Task(taskProps);
-    doc.inboxTasks.push(task);
+    // Create the task using proper JXA syntax
+    let task;
     
     // Handle project assignment if specified
     if (options.projectId) {
       try {
         const project = doc.flattenedProjects.byId(options.projectId);
-        if (project && project.id) {
-          task.assignedContainer = project;
+        if (project && project.id()) {
+          // Create task using official OmniFocus API pattern
+          task = app.Task(taskProps);
+          project.tasks.push(task);
+        } else {
+          // Project not found, create inbox task
+          task = app.InboxTask(taskProps);
+          doc.inboxTasks.push(task);
         }
       } catch (e) {
-        // Project not found, leave in inbox
+        // Project not found, create inbox task
+        task = app.InboxTask(taskProps);
+        doc.inboxTasks.push(task);
       }
+    } else {
+      // No project specified, create inbox task
+      task = app.InboxTask(taskProps);
+      doc.inboxTasks.push(task);
     }
     
     // Handle tag assignment if specified
@@ -74,28 +106,33 @@
       }
     }
     
+    // Allow brief time for OmniFocus to sync the task association
+    if (options.projectId) {
+      delay(0.1); // 100ms delay for synchronization
+    }
+    
     // Return task data - use try-catch for each property to handle conversion errors
     const result = {};
     
-    try { result.id = task.id; } catch (e) { result.id = null; }
-    try { result.name = task.name; } catch (e) { result.name = 'Unknown Task'; }
-    try { result.note = task.note || ''; } catch (e) { result.note = ''; }
-    try { result.completed = task.completed; } catch (e) { result.completed = false; }
-    try { result.completionDate = task.completionDate ? task.completionDate.toISOString() : null; } catch (e) { result.completionDate = null; }
-    try { result.dueDate = task.dueDate ? task.dueDate.toISOString() : null; } catch (e) { result.dueDate = null; }
-    try { result.deferDate = task.deferDate ? task.deferDate.toISOString() : null; } catch (e) { result.deferDate = null; }
-    try { result.flagged = task.flagged; } catch (e) { result.flagged = false; }
-    try { result.estimatedMinutes = task.estimatedMinutes || null; } catch (e) { result.estimatedMinutes = null; }
+    try { result.id = task.id(); } catch (e) { result.id = null; }
+    try { result.name = task.name(); } catch (e) { result.name = 'Unknown Task'; }
+    try { result.note = task.note() || ''; } catch (e) { result.note = ''; }
+    try { result.completed = task.completed(); } catch (e) { result.completed = false; }
+    try { result.completionDate = task.completionDate() ? task.completionDate().toISOString() : null; } catch (e) { result.completionDate = null; }
+    try { result.dueDate = task.dueDate() ? task.dueDate().toISOString() : null; } catch (e) { result.dueDate = null; }
+    try { result.deferDate = task.deferDate() ? task.deferDate().toISOString() : null; } catch (e) { result.deferDate = null; }
+    try { result.flagged = task.flagged(); } catch (e) { result.flagged = false; }
+    try { result.estimatedMinutes = task.estimatedMinutes() || null; } catch (e) { result.estimatedMinutes = null; }
     try { 
-      if (task.assignedContainer && task.assignedContainer.id) {
-        result.projectId = task.assignedContainer.id;
+      if (task.assignedContainer() && task.assignedContainer().id()) {
+        result.projectId = task.assignedContainer().id();
       } else {
         result.projectId = options.projectId || null;
       }
     } catch (e) { 
       result.projectId = options.projectId || null; 
     }
-    try { result.tags = task.tags ? task.tags.map(t => ({ id: t.id, name: t.name })) : []; } catch (e) { result.tags = []; }
+    try { result.tags = task.tags() ? task.tags().map(t => ({ id: t.id(), name: t.name() })) : []; } catch (e) { result.tags = []; }
     
     return JSON.stringify(result);
     

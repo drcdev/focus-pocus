@@ -1,6 +1,33 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // OmniFocus 4 requires function call syntax for property access
+      const value = obj[prop]();
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      // Fallback to direct property access for compatibility
+      try {
+        const directValue = obj[prop];
+        return directValue !== undefined ? directValue : defaultValue;
+      } catch (e2) {
+        return defaultValue;
+      }
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -19,17 +46,17 @@
       
       try {
         const projectData = {
-          id: project.id(),
-          name: project.name(),
-          note: project.note() || null,
-          status: project.status(),
-          creationDate: project.creationDate().toISOString(),
-          modificationDate: project.modificationDate().toISOString(),
-          completionDate: project.completionDate() ? project.completionDate().toISOString() : null,
-          dueDate: project.dueDate() ? project.dueDate().toISOString() : null,
-          deferDate: project.deferDate() ? project.deferDate().toISOString() : null,
-          estimatedMinutes: project.estimatedMinutes() || null,
-          flagged: project.flagged(),
+          id: safeGet(project, 'id'),
+          name: safeGet(project, 'name'),
+          note: safeGet(project, 'note'),
+          status: safeGet(project, 'status'),
+          creationDate: safeDate(safeGet(project, 'creationDate')),
+          modificationDate: safeDate(safeGet(project, 'modificationDate')),
+          completionDate: safeDate(safeGet(project, 'completionDate')),
+          dueDate: safeDate(safeGet(project, 'dueDate')),
+          deferDate: safeDate(safeGet(project, 'deferDate')),
+          estimatedMinutes: safeGet(project, 'estimatedMinutes'),
+          flagged: safeGet(project, 'flagged', false),
           tags: [],
           folderId: null,
           taskCount: 0,
@@ -39,27 +66,30 @@
         };
         
         // Get tags
-        const projectTags = project.tags();
+        const projectTags = safeGet(project, 'tags');
         if (projectTags && projectTags.length > 0) {
           for (let j = 0; j < projectTags.length; j++) {
-            projectData.tags.push(projectTags[j].name());
+            const tagName = safeGet(projectTags[j], 'name');
+            if (tagName) {
+              projectData.tags.push(tagName);
+            }
           }
         }
         
         // Get containing folder
-        const containingFolder = project.folder();
+        const containingFolder = safeGet(project, 'folder');
         if (containingFolder) {
-          projectData.folderId = containingFolder.id();
+          projectData.folderId = safeGet(containingFolder, 'id');
         }
         
         // Get task counts
-        const tasks = project.tasks();
+        const tasks = safeGet(project, 'tasks');
         if (tasks) {
           projectData.taskCount = tasks.length;
           
           let completedCount = 0;
           for (let k = 0; k < tasks.length; k++) {
-            if (tasks[k].completed()) {
+            if (safeGet(tasks[k], 'completed', false)) {
               completedCount++;
             }
           }
@@ -69,9 +99,9 @@
         }
         
         // Get next task
-        const nextTask = project.nextTask();
+        const nextTask = safeGet(project, 'nextTask');
         if (nextTask) {
-          projectData.nextTaskId = nextTask.id();
+          projectData.nextTaskId = safeGet(nextTask, 'id');
         }
         
         projects.push(projectData);

@@ -12,10 +12,13 @@
     const itemId = {{itemId}};
     const tagIds = {{tagIds}};
     const itemType = {{itemType}};
+    
+    // Try using OmniFocus JXA API with Application.add() method as seen in forum
     const doc = app.defaultDocument;
+    let item = null;
+    let assignedCount = 0;
     
     // Find the item
-    let item = null;
     try {
       if (itemType === 'task' || !itemType) {
         item = doc.flattenedTasks.byId(itemId);
@@ -26,76 +29,71 @@
       throw new Error('Item not found');
     }
     
-    if (!item || !item.id) {
+    if (!item || !item.id()) {
       throw new Error('Item not found');
     }
     
-    // Get tags and assign them
+    // Get tags to assign by iterating through all tags (byId doesn't work reliably)
     const tagsToAssign = [];
-    for (const tagId of tagIds) {
-      try {
-        const tag = doc.flattenedTags.byId(tagId);
-        if (tag && tag.id) tagsToAssign.push(tag);
-      } catch (e) {
-        // Skip invalid tags
-      }
-    }
+    const debugInfo = [];
     
-    if (tagsToAssign.length > 0) {
-      try {
-        // Get current tags safely
-        let currentTags = [];
-        try {
-          const existingTags = item.tags;
-          if (existingTags && existingTags.length > 0) {
-            currentTags = [];
-            for (let i = 0; i < existingTags.length; i++) {
-              try {
-                currentTags.push(existingTags[i]);
-              } catch (e) {
-                // Skip invalid existing tags
-              }
-            }
-          }
-        } catch (e) {
-          currentTags = [];
-        }
+    try {
+      const allTags = doc.flattenedTags;
+      
+      for (const requestedTagId of tagIds) {
+        let foundTag = null;
         
-        // Create combined tag array more carefully
-        const allTags = [];
-        
-        // Add existing tags first
-        for (const tag of currentTags) {
-          allTags.push(tag);
-        }
-        
-        // Add new tags, avoiding duplicates
-        for (const newTag of tagsToAssign) {
-          let isDuplicate = false;
+        for (let i = 0; i < allTags.length; i++) {
+          const tag = allTags[i];
           try {
-            for (const existingTag of currentTags) {
-              if (existingTag.id === newTag.id) {
-                isDuplicate = true;
-                break;
-              }
+            if (tag.id() === requestedTagId) {
+              foundTag = tag;
+              break;
             }
           } catch (e) {
-            // If we can't check for duplicates, add anyway
-          }
-          
-          if (!isDuplicate) {
-            allTags.push(newTag);
+            // Skip tags that can't be accessed
           }
         }
         
-        // Assign the combined tag array
-        item.tags = allTags;
+        if (foundTag) {
+          tagsToAssign.push(foundTag);
+          debugInfo.push(`Found tag: ${foundTag.name()} (${foundTag.id()})`);
+        } else {
+          debugInfo.push(`Tag not found for ID: ${requestedTagId}`);
+        }
+      }
+    } catch (e) {
+      throw new Error(`Failed to search for tags: ${e.message}`);
+    }
+    
+    // Optional: Log debug info if needed
+    // for (const info of debugInfo) {
+    //   console.log(info);
+    // }
+    
+    // Use Application.add() method as suggested in forum discussion
+    if (tagsToAssign.length > 0) {
+      try {
+        for (let i = 0; i < tagsToAssign.length; i++) {
+          const tag = tagsToAssign[i];
+          try {
+            app.add(tag, { to: item.tags });
+            assignedCount++;
+          } catch (tagError) {
+            // Skip individual tag errors but continue with others
+            // console.log(`Warning: Failed to assign tag ${i}: ${tagError.message}`);
+          }
+        }
       } catch (e) {
-        throw new Error('Failed to assign tags: ' + e.message);
+        throw new Error(`Failed to assign tags using app.add(): ${e.message}`);
       }
     }
     
-    return JSON.stringify({ success: true });
+    return JSON.stringify({ 
+      success: true, 
+      assignedCount: assignedCount,
+      message: `Successfully assigned ${assignedCount} tag(s) using Application.add() method`
+    });
     
   } catch (error) {
     return JSON.stringify({

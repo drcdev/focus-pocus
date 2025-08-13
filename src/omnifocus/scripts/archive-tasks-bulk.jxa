@@ -1,6 +1,27 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // Direct property access is faster and more reliable in OmniFocus 4
+      const value = obj[prop];
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -18,7 +39,8 @@
     // Get or create archive tag
     let archiveTag = doc.flattenedTags.whose({ name: 'Archive' })[0];
     if (!archiveTag) {
-      archiveTag = doc.tags.push(app.Tag({ name: 'Archive' }));
+      archiveTag = app.Tag({ name: 'Archive' });
+      doc.tags.push(archiveTag);
     }
     
     for (const taskId of taskIds) {

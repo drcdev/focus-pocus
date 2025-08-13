@@ -1,0 +1,120 @@
+(() => {
+  'use strict';
+  
+  try {
+    const itemIds = {{itemIds}};
+    const tagIds = {{tagIds}};
+    const itemType = {{itemType}} || 'task';
+
+    if (!itemIds || !Array.isArray(itemIds) || itemIds.length === 0) {
+      return JSON.stringify({ 
+        success: false, 
+        error: { message: 'itemIds array is required and must not be empty' } 
+      });
+    }
+
+    if (!tagIds || !Array.isArray(tagIds) || tagIds.length === 0) {
+      return JSON.stringify({ 
+        success: false, 
+        error: { message: 'tagIds array is required and must not be empty' } 
+      });
+    }
+
+    const app = Application('OmniFocus');
+    app.includeStandardAdditions = true;
+    
+    if (!app.running()) {
+      throw new Error('OmniFocus is not running');
+    }
+    
+    const doc = app.defaultDocument;
+
+    // Get all tags to assign by iterating through all tags (byId doesn't work reliably)
+    const tagsToAssign = [];
+    const allTags = doc.flattenedTags;
+    
+    for (const requestedTagId of tagIds) {
+      let foundTag = null;
+      
+      for (let i = 0; i < allTags.length; i++) {
+        const tag = allTags[i];
+        try {
+          if (tag.id() === requestedTagId) {
+            foundTag = tag;
+            break;
+          }
+        } catch (e) {
+          // Skip tags that can't be accessed
+        }
+      }
+      
+      if (foundTag) {
+        tagsToAssign.push(foundTag);
+      }
+    }
+
+    if (tagsToAssign.length === 0) {
+      return JSON.stringify({ 
+        error: 'No valid tags found for assignment'
+      });
+    }
+
+    let successCount = 0;
+    let errorCount = 0;
+    const errors = [];
+
+    // Process each item
+    for (const itemId of itemIds) {
+      try {
+        let item;
+        
+        // Find the item
+        try {
+          if (itemType === 'task' || !itemType) {
+            item = doc.flattenedTasks.byId(itemId);
+          } else {
+            item = doc.flattenedProjects.byId(itemId);
+          }
+        } catch (e) {
+          errors.push(`${itemType} with ID ${itemId} not found`);
+          errorCount++;
+          continue;
+        }
+        
+        if (!item || !item.id()) {
+          errors.push(`${itemType} with ID ${itemId} not found`);
+          errorCount++;
+          continue;
+        }
+
+        // Assign each tag to the item
+        for (const tag of tagsToAssign) {
+          try {
+            app.add(tag, { to: item.tags });
+          } catch (tagError) {
+            console.log(`Warning: Failed to assign tag ${tag.name()} to ${itemType} ${itemId}: ${tagError.message}`);
+          }
+        }
+
+        successCount++;
+
+      } catch (error) {
+        errors.push(`Error processing ${itemType} ${itemId}: ${error.message}`);
+        errorCount++;
+      }
+    }
+
+    return JSON.stringify({
+      processedItems: itemIds.length,
+      successCount,
+      errorCount,
+      errors: errors.length > 0 ? errors : undefined,
+      tagsAssigned: tagsToAssign.length
+    });
+
+  } catch (error) {
+    return JSON.stringify({
+      error: error.message
+    });
+  }
+})();

@@ -15,6 +15,11 @@ export class ProjectOperationsTool {
       throw new Error(response.error?.message || 'Failed to create project');
     }
 
+    // Check if JXA script returned an error object
+    if (response.data && typeof response.data === 'object' && 'error' in response.data && response.data.error === true) {
+      throw new Error(response.data.message || 'Failed to create project');
+    }
+
     const result = response.data;
     
     // Invalidate caches
@@ -30,6 +35,11 @@ export class ProjectOperationsTool {
     const response = await JXABridge.execScriptFile('update-project', { projectId, updates });
     if (!response.success) {
       throw new Error(response.error?.message || 'Failed to update project');
+    }
+
+    // Check if JXA script returned an error object
+    if (response.data && typeof response.data === 'object' && 'error' in response.data && response.data.error === true) {
+      throw new Error(response.data.message || 'Failed to update project');
     }
 
     const result = response.data;
@@ -51,6 +61,11 @@ export class ProjectOperationsTool {
       throw new Error(response.error?.message || 'Failed to duplicate project');
     }
 
+    // Check if JXA script returned an error object
+    if (response.data && typeof response.data === 'object' && 'error' in response.data && response.data.error === true) {
+      throw new Error(response.data.message || 'Failed to duplicate project');
+    }
+
     const result = response.data;
     
     // Invalidate caches
@@ -63,6 +78,11 @@ export class ProjectOperationsTool {
     const response = await JXABridge.execScriptFile('create-folder', { name, parentFolderId });
     if (!response.success) {
       throw new Error(response.error?.message || 'Failed to create folder');
+    }
+
+    // Check if JXA script returned an error object
+    if (response.data && typeof response.data === 'object' && 'error' in response.data && response.data.error === true) {
+      throw new Error(response.data.message || 'Failed to create folder');
     }
 
     const result = response.data;
@@ -80,6 +100,11 @@ export class ProjectOperationsTool {
     const response = await JXABridge.execScriptFile('move-project', { projectId, targetFolderId });
     if (!response.success) {
       throw new Error(response.error?.message || 'Failed to move project');
+    }
+
+    // Check if JXA script returned an error object
+    if (response.data && typeof response.data === 'object' && 'error' in response.data && response.data.error === true) {
+      throw new Error(response.data.message || 'Failed to move project');
     }
 
     const result = response.data;
@@ -100,6 +125,11 @@ export class ProjectOperationsTool {
     const response = await JXABridge.execScriptFile('get-folder-hierarchy', {});
     if (!response.success) {
       throw new Error(response.error?.message || 'Failed to get folder hierarchy');
+    }
+
+    // Check if JXA script returned an error object
+    if (response.data && typeof response.data === 'object' && 'error' in response.data && response.data.error === true) {
+      throw new Error(response.data.message || 'Failed to get folder hierarchy');
     }
 
     const result = response.data as FolderExtended[];

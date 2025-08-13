@@ -1,6 +1,33 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // OmniFocus 4 requires function call syntax for property access
+      const value = obj[prop]();
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      // Fallback to direct property access for compatibility
+      try {
+        const directValue = obj[prop];
+        return directValue !== undefined ? directValue : defaultValue;
+      } catch (e2) {
+        return defaultValue;
+      }
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -9,28 +36,93 @@
       throw new Error('OmniFocus is not running');
     }
     
+    const options = {{options}};
     const doc = app.defaultDocument;
     
-    // Create basic task in inbox
-    const task = doc.inboxTasks.push(app.Task({
-      name: 'Test Task',
-      note: 'This is a test task created by Focus Pocus MCP Server',
-      flagged: false
-    }));
+    // Build task properties for inbox task
+    const taskProps = {
+      name: options.name
+    };
     
-    return JSON.stringify({
-      id: task.id(),
-      name: task.name(),
-      note: task.note() || '',
-      completed: task.completed(),
-      completionDate: task.completionDate() ? task.completionDate().toISOString() : null,
-      dueDate: task.dueDate() ? task.dueDate().toISOString() : null,
-      deferDate: task.deferDate() ? task.deferDate().toISOString() : null,
-      flagged: task.flagged(),
-      estimatedMinutes: task.estimatedMinutes() || null,
-      projectId: task.assignedContainer() ? task.assignedContainer().id() : null,
-      tags: task.tags().map(t => ({ id: t.id(), name: t.name() }))
-    });
+    if (options.note) taskProps.note = options.note;
+    if (options.flagged !== undefined) taskProps.flagged = options.flagged;
+    if (options.dueDate) {
+      try {
+        const dueDate = new Date(options.dueDate);
+        if (!isNaN(dueDate.getTime())) {
+          taskProps.dueDate = dueDate;
+        }
+      } catch (e) {
+        // Invalid date, skip setting
+      }
+    }
+    if (options.deferDate) {
+      try {
+        const deferDate = new Date(options.deferDate);
+        if (!isNaN(deferDate.getTime())) {
+          taskProps.deferDate = deferDate;
+        }
+      } catch (e) {
+        // Invalid date, skip setting
+      }
+    }
+    if (options.estimatedMinutes) taskProps.estimatedMinutes = options.estimatedMinutes;
+    if (options.repetitionRule) taskProps.repetitionRule = options.repetitionRule;
+    
+    // Create inbox task using proper JXA syntax
+    const task = app.InboxTask(taskProps);
+    doc.inboxTasks.push(task);
+    
+    // Handle tag assignment if specified
+    if (options.tags && options.tags.length > 0) {
+      try {
+        const tags = [];
+        for (const tagId of options.tags) {
+          const tag = doc.flattenedTags.byId(tagId);
+          if (tag) tags.push(tag);
+        }
+        if (tags.length > 0) {
+          task.tags = tags;
+        }
+      } catch (e) {
+        // Tags not found, continue without them
+      }
+    }
+    
+    // Allow brief time for OmniFocus to sync the task
+    delay(0.1); // 100ms delay for synchronization
+    
+    // Return task data using safeGet utility function
+    const result = {
+      id: safeGet(task, 'id'),
+      name: safeGet(task, 'name', 'Unknown Task'),
+      note: safeGet(task, 'note', ''),
+      completed: safeGet(task, 'completed', false),
+      completionDate: safeDate(safeGet(task, 'completionDate')),
+      creationDate: safeDate(safeGet(task, 'creationDate')),
+      modificationDate: safeDate(safeGet(task, 'modificationDate')),
+      dueDate: safeDate(safeGet(task, 'dueDate')),
+      deferDate: safeDate(safeGet(task, 'deferDate')),
+      estimatedMinutes: safeGet(task, 'estimatedMinutes'),
+      flagged: safeGet(task, 'flagged', false),
+      repetitionRule: safeGet(task, 'repetitionRule') ? safeGet(task, 'repetitionRule').toString() : null,
+      tags: [],
+      projectId: null, // Inbox tasks have no project
+      parentTaskId: null,
+      containingProjectInfo: null
+    };
+    
+    // Get tags safely
+    const taskTags = safeGet(task, 'tags');
+    if (taskTags && taskTags.length > 0) {
+      for (let j = 0; j < taskTags.length; j++) {
+        const tagName = safeGet(taskTags[j], 'name');
+        const tagId = safeGet(taskTags[j], 'id');
+        if (tagName) result.tags.push({ id: tagId, name: tagName });
+      }
+    }
+    
+    return JSON.stringify(result);
     
   } catch (error) {
     return JSON.stringify({

@@ -12,11 +12,12 @@ This script provides a comprehensive test sequence for the Focus Pocus MCP serve
 **Read/Query (10 tools):** get_all_tasks, get_task_by_id, search_tasks, get_all_projects, get_project_by_id, get_all_tags, get_all_folders, get_perspectives, get_database_info, get_project_tasks, diagnose_connection  
 **Date/Scheduling (3 tools):** parse_natural_date, schedule_tasks_optimally, adjust_dates_bulk
 
-## Instructions
+## Important instructions
 
 - Run each prompt one at a time
-- Wait for completion before proceeding to the next prompt and do not try alternative methods
-- If a prompt fails or the tool is not found, DO NOT CONTINUE to the next prompt. Prepare an error report for the user that includes: the prompt, the mcp tool, the request, the response, and the error message.
+- Wait for completion before proceeding to the next prompt and do not try alternative methods to complete the task.
+- If a prompt fails or the tool is not found, DO NOT CONTINUE to the next prompt.
+- At the end of each phase, prepare an error report for the user that includes: the prompt, the mcp tool, the request, the response, and the error message.
 - Note any IDs returned (tasks, projects, folders, tags) for use in subsequent prompts
 - Some prompts reference previous results - substitute actual IDs when indicated
 
@@ -71,7 +72,7 @@ List all my tasks with a limit of 10, then show me some completed tasks using in
 ### 3.1 Create Test Folder _(create_folder)_
 
 ```
-Create a folder called 'Test Projects'
+Create a folder called 'fptest folder'
 ```
 
 _Note the folder ID returned_
@@ -79,7 +80,7 @@ _Note the folder ID returned_
 ### 3.2 Create Main Test Project _(create_project)_
 
 ```
-Create a new project called 'Sequential Test Project' in the Test Projects folder
+Create a new project called 'fptest main project' in the fptest folder
 ```
 
 _Note the project ID returned_
@@ -87,7 +88,7 @@ _Note the project ID returned_
 ### 3.3 Create Secondary Project _(create_project)_
 
 ```
-Create a project 'Workflow Testing' with status set to active
+Create a project 'fptest workflow' with status set to active
 ```
 
 _Note the project ID returned_
@@ -95,7 +96,7 @@ _Note the project ID returned_
 ### 3.4 Create Support Project _(create_project)_
 
 ```
-Add a project 'Archive Testing' with status on-hold
+Add a project 'fptest archive' with status on-hold
 ```
 
 _Note the project ID returned_
@@ -107,69 +108,85 @@ _Note the project ID returned_
 ### 4.1 Create Primary Tags _(create_tag)_
 
 ```
-Create a tag called 'test-workflow'
+Create a tag called 'fptest workflow'
 ```
 
 ### 4.2 Create Secondary Tags _(create_tag)_
 
 ```
-Create tags: 'urgent', 'waiting-for', and 'quick-win'
+Create tags: 'fptest urgent', 'fptest waiting', and 'fptest quick'
 ```
 
 ### 4.3 Create Nested Tag _(create_tag)_
 
 ```
-Create a nested tag 'test-subtag' under 'test-workflow'
+Create a nested tag 'fptest subtag' under 'fptest workflow'
 ```
 
 ---
 
 ## Phase 5: Task Creation Workflow
 
-### 5.1 Basic Task Creation _(create_task_in_project)_
+### 5.1 Inbox Task Creation _(create_task)_
 
 ```
-Create a task called 'Test Task Alpha' in the Sequential Test Project
+Create a task called 'fptest inbox task' with note 'Testing inbox functionality' - do NOT specify a project to ensure it goes to the inbox
+```
+
+_Note the task ID returned - this should go directly to OmniFocus inbox_
+
+### 5.2 Inbox Task Creation with date _(create_task)_
+
+```
+Create a task called 'fptest inbox task' with note 'Testing inbox functionality' with due date '2025-08-12' - do NOT specify a project to ensure it goes to the inbox
+```
+
+_Note the task ID returned - this should go directly to OmniFocus inbox_
+
+### 5.3 Basic Task Creation in Project _(create_task_in_project)_
+
+```
+Create a task called 'fptest task alpha' in the fptest main project
 ```
 
 _Note the task ID returned_
 
-### 5.2 Task with Properties _(create_task_in_project)_
+### 5.4 Task Creation with Automatic Project Assignment _(create_task)_
 
 ```
-Create a flagged task 'Test Task Beta' with note 'This is a test task with properties' due tomorrow in the Sequential Test Project
+Create a task 'fptest task beta' with note 'This task will be assigned to a project' and projectId set to the fptest main project ID
+```
+
+_Note the task ID returned - this tests create_task with projectId parameter_
+
+### 5.5 Task with Properties _(create_task_in_project)_
+
+```
+Create a flagged task 'fptest task gamma' with note 'This is a test task with properties' due tomorrow in the fptest main project
 ```
 
 _Note the task ID returned_
 
-### 5.3 Task with Estimation _(create_task_in_project)_
+### 5.6 Task with Estimation _(create_task_in_project)_
 
 ```
-Create a task 'Test Task Gamma' estimated at 60 minutes due next Friday in the Sequential Test Project
+Create a task 'fptest task delta' estimated at 60 minutes due next Friday in the fptest main project
 ```
 
 _Note the task ID returned_
 
-### 5.4 Subtask Creation _(create_subtask)_
+### 5.7 Subtask Creation _(create_subtask)_
 
 ```
-Create a subtask 'Subtask Alpha' under Test Task Alpha
+Create a subtask 'fptest subtask alpha' under fptest task alpha
 ```
 
 _Note the subtask ID returned_
 
-### 5.5 Inbox Task _(create_task)_
+### 5.8 Bulk Task Creation _(batch_create_tasks)_
 
 ```
-Create a task 'Inbox Test Task' with note 'Testing inbox functionality'
-```
-
-_Note the task ID returned_
-
-### 5.6 Bulk Task Creation _(batch_create_tasks)_
-
-```
-Create multiple tasks in Sequential Test Project: 'Bulk Task 1', 'Bulk Task 2', 'Bulk Task 3'
+Create multiple tasks in fptest main project: 'fptest bulk 1', 'fptest bulk 2', 'fptest bulk 3'
 ```
 
 _Note all task IDs returned_
@@ -181,37 +198,37 @@ _Note all task IDs returned_
 ### 6.1 Basic Property Updates _(update_task)_
 
 ```
-Update Test Task Alpha to be flagged and add note 'Updated during testing'
+Update fptest task alpha to be flagged and add note 'Updated during testing'
 ```
 
 ### 6.2 Date Updates _(update_task)_
 
 ```
-Change Test Task Beta due date to next Monday
+Change fptest task beta due date to next Monday
 ```
 
 ### 6.3 Status Updates _(complete_task)_
 
 ```
-Mark Test Task Gamma as completed
+Mark fptest task gamma as completed
 ```
 
-### 6.4 Tag Assignment _(assign_tags)_
+### 6.4 Inbox Task Movement _(move_task)_
 
 ```
-Assign tags 'test-workflow' and 'urgent' to Test Task Alpha
+Move fptest inbox task to the fptest main project
 ```
 
-### 6.5 Task Movement _(move_task)_
+### 6.5 Tag Assignment _(assign_tags)_
 
 ```
-Move Inbox Test Task to the Sequential Test Project
+Assign tags 'fptest workflow' and 'fptest urgent' to fptest task alpha
 ```
 
 ### 6.6 Multiple Tag Operations _(assign_tags, remove_tags)_
 
 ```
-Tag Test Task Beta with 'waiting-for' and remove any 'urgent' tag if present
+Tag fptest task beta with 'fptest waiting' and remove any 'fptest urgent' tag if present
 ```
 
 ---
@@ -221,71 +238,71 @@ Tag Test Task Beta with 'waiting-for' and remove any 'urgent' tag if present
 ### 7.1 Project Task Retrieval _(get_project_tasks)_
 
 ```
-Get all tasks in the Sequential Test Project
+Get all tasks in the fptest main project
 ```
 
 ### 7.2 Search by Name _(search_tasks)_
 
 ```
-Search for tasks containing 'Test Task'
+Search for tasks containing 'fptest task'
 ```
 
 ### 7.3 Search by Tag _(search_tasks)_
 
 ```
-Find all tasks tagged with 'test-workflow'
+Find all tasks tagged with 'fptest workflow'
 ```
 
 ### 7.4 Search by Status _(search_tasks)_
 
 ```
-Search for all flagged tasks
+Search for all flagged tasks (should include fptest tasks)
 ```
 
 ### 7.5 Search by Date _(search_tasks)_
 
 ```
-Get all tasks due this week
+Get all tasks due this week (should include fptest tasks with dates)
 ```
 
 ### 7.6 Advanced Filter Search _(search_tasks)_
 
 ```
-Search for incomplete tasks in Sequential Test Project that are flagged
+Search for incomplete tasks in fptest main project that are flagged
 ```
 
 ### 7.7 Task by ID Lookup _(get_task_by_id)_
 
 ```
-Get details for Test Task Alpha by its ID
+Get details for fptest task alpha by its ID
 ```
 
 ### 7.8 Project by ID Lookup _(get_project_by_id)_
 
 ```
-Show me the Sequential Test Project details by its ID
+Show me the fptest main project details by its ID
 ```
 
 ---
 
 ## Phase 8: Bulk Operations
 
-### 8.1 Bulk Tag Assignment _(assign_tags)_
+### 8.1 Bulk Tag Assignment _(bulk_assign_tags)_
 
 ```
-Assign tag 'quick-win' to all tasks in Sequential Test Project
+Assign tag 'fptest quick' to all tasks in fptest main project
 ```
 
 ### 8.2 Bulk Date Updates _(bulk_update_tasks)_
 
 ```
-Update all incomplete tasks in Sequential Test Project to be due next week
+Update all incomplete tasks in fptest main project to be due next week
 ```
 
 ### 8.3 Bulk Status Changes _(bulk_update_tasks)_
 
 ```
-Flag all tasks containing 'Bulk Task' in the name
+Flag all tasks containing 'fptest bulk' in the name
 ```
 
 ---
@@ -307,13 +324,13 @@ Convert these dates: 'end of next month', 'in 3 weeks', 'tomorrow morning'
 ### 9.3 Optimal Task Scheduling _(schedule_tasks_optimally)_
 
 ```
-Schedule all incomplete tasks in Sequential Test Project optimally across the next 2 weeks
+Schedule all incomplete tasks in fptest main project optimally across the next 2 weeks
 ```
 
 ### 9.4 Bulk Date Adjustments _(adjust_dates_bulk)_
 
 ```
-Move all tasks due this week in Sequential Test Project to next week
+Move all tasks due this week in fptest main project to next week
 ```
 
 ---
@@ -323,13 +340,13 @@ Move all tasks due this week in Sequential Test Project to next week
 ### 10.1 Project Updates _(update_project)_
 
 ```
-Update Workflow Testing project name to 'Updated Workflow Testing' and set due date to end of month
+Update fptest workflow project name to 'fptest workflow-updated' and set due date to end of month
 ```
 
 ### 10.2 Project Duplication _(duplicate_project)_
 
 ```
-Duplicate Sequential Test Project with all tasks
+Duplicate fptest main project with all tasks
 ```
 
 _Note the new project ID_
@@ -337,13 +354,13 @@ _Note the new project ID_
 ### 10.3 Project Status Changes _(update_project)_
 
 ```
-Mark Archive Testing project as completed
+Mark fptest archive project as completed
 ```
 
 ### 10.4 Project Movement _(move_project)_
 
 ```
-Move the duplicated project to the Test Projects folder
+Move the duplicated project to the fptest folder
 ```
 
 ---
@@ -353,19 +370,19 @@ Move the duplicated project to the Test Projects folder
 ### 11.1 Task Completion Workflow _(complete_task, create_task_in_project)_
 
 ```
-Complete Test Task Alpha and create a follow-up task 'Follow-up Alpha' in the same project
+Complete fptest task alpha and create a follow-up task 'fptest followup' in the same project
 ```
 
 ### 11.2 Task Uncomplete _(uncomplete_task)_
 
 ```
-Mark Test Task Gamma as incomplete again
+Mark fptest task gamma as incomplete again
 ```
 
 ### 11.3 Task Movement Between Projects _(move_task)_
 
 ```
-Move one of the bulk tasks to the Workflow Testing project
+Move fptest bulk-1 to the fptest workflow project
 ```
 
 ---
@@ -375,19 +392,19 @@ Move one of the bulk tasks to the Workflow Testing project
 ### 12.1 Tagged Items Retrieval _(get_tagged_items)_
 
 ```
-Get all items tagged with 'test-workflow'
+Get all items tagged with 'fptest workflow'
 ```
 
 ### 12.2 Tag Removal Operations _(remove_tags)_
 
 ```
-Remove tag 'urgent' from Test Task Alpha
+Remove tag 'fptest urgent' from fptest task alpha
 ```
 
 ### 12.3 Cross-Project Tag Analysis _(get_tagged_items)_
 
 ```
-Show me all tasks and projects tagged with 'quick-win'
+Show me all tasks and projects tagged with 'fptest quick'
 ```
 
 ---
@@ -397,19 +414,19 @@ Show me all tasks and projects tagged with 'quick-win'
 ### 13.1 Weekly Planning Simulation _(create_task, assign_tags)_
 
 ```
-Create a task 'Weekly Planning Session' due next Monday, then flag it and tag it with 'urgent'
+Create a task 'fptest planning' due next Monday, then flag it and tag it with 'fptest urgent'
 ```
 
 ### 13.2 Project Review Simulation _(get_project_tasks, create_task)_
 
 ```
-Get all tasks in Sequential Test Project, count completed vs remaining, and create a task 'Project Review Complete'
+Get all tasks in fptest main project, count completed vs remaining, and create a task 'fptest review'
 ```
 
 ### 13.3 Multi-Project Analysis _(search_tasks)_
 
 ```
-Search for all tasks across all test projects and show completion statistics
+Search for all tasks containing 'fptest' and show completion statistics
 ```
 
 ---
@@ -419,50 +436,90 @@ Search for all tasks across all test projects and show completion statistics
 ### 14.1 Task Archive Testing _(archive_task)_
 
 ```
-Archive the completed Test Task Gamma
+Archive the completed fptest task gamma
 ```
 
 ### 14.2 Selective Task Deletion _(delete_task)_
 
 ```
-Delete one of the bulk tasks (with confirmation)
+Delete fptest bulk-2 (with confirmation)
 ```
 
 ### 14.3 Project Cleanup Preparation _(complete_task)_
 
 ```
-Complete all remaining incomplete tasks in the Archive Testing project
+Complete all remaining incomplete tasks in the fptest archive project
 ```
 
 ---
 
-## Phase 15: Edge Cases & Error Handling
+## Phase 15: Task Creation Method Validation
 
-### 15.1 Invalid ID Testing _(get_task_by_id)_
+### 15.1 Verify Inbox Task Placement _(get_all_tasks)_
+
+```
+Get all tasks with includeCompleted=false and verify that 'fptest inbox-task' appears in the inbox (not in any project)
+```
+
+### 15.2 Compare Task Creation Methods _(create_task)_
+
+```
+Create a task 'fptest method-a' using create_task without projectId to ensure it goes to inbox
+```
+
+### 15.3 Compare Task Creation Methods _(create_task)_
+
+```
+Create a task 'fptest method-b' using create_task WITH projectId set to fptest main project
+```
+
+### 15.4 Verify Method Differences _(search_tasks)_
+
+```
+Search for tasks 'fptest method-a' and 'fptest method-b' and confirm their project assignments differ
+```
+
+### 15.5 Batch Inbox Creation _(batch_create_tasks)_
+
+```
+Create multiple inbox tasks using batch_create_tasks without projectId: 'fptest inbox batch 1', 'fptest inbox batch 2'
+```
+
+### 15.6 Batch Project Creation _(batch_create_tasks)_
+
+```
+Create multiple project tasks using batch_create_tasks with projectId: 'fptest proj batch 1', 'fptest proj batch 2'
+```
+
+---
+
+## Phase 16: Edge Cases & Error Handling
+
+### 16.1 Invalid ID Testing _(get_task_by_id)_
 
 ```
 Try to get task with ID 'nonexistent-task-id'
 ```
 
-### 15.2 Invalid Date Testing _(create_task)_
+### 16.2 Invalid Date Testing _(create_task)_
 
 ```
-Try to create a task 'Invalid Date Task' due 'yesterday'
+Try to create a task 'fptest invalid date' due 'yesterday'
 ```
 
-### 15.3 Long Name Testing _(create_task)_
+### 16.3 Long Name Testing _(create_task)_
 
 ```
-Create a task with a very long name: 'This is an extremely long task name that tests the system limits and ensures proper handling of extended text input that might exceed normal boundaries and could potentially cause issues with display or storage mechanisms'
+Create a task with a very long name: 'fptest extremely long task name that tests the system limits and ensures proper handling of extended text input that might exceed normal boundaries and could potentially cause issues with display or storage mechanisms'
 ```
 
-### 15.4 Boundary Testing _(batch_create_tasks)_
+### 16.4 Boundary Testing _(batch_create_tasks)_
 
 ```
-Try to create 25 tasks at once with names 'Boundary Test 1' through 'Boundary Test 25'
+Try to create 25 tasks at once with names 'fptest boundary 1' through 'fptest boundary 25'
 ```
 
-### 15.5 Deletion Without Confirmation _(delete_task)_
+### 16.5 Deletion Without Confirmation _(delete_task)_
 
 ```
 Try to delete a task without setting confirm to true
@@ -470,21 +527,21 @@ Try to delete a task without setting confirm to true
 
 ---
 
-## Phase 16: Performance & Pagination Testing
+## Phase 17: Performance & Pagination Testing
 
-### 16.1 Large Dataset Retrieval _(get_all_tasks)_
+### 17.1 Large Dataset Retrieval _(get_all_tasks)_
 
 ```
 Get all tasks with limit 50 and offset 0
 ```
 
-### 16.2 Pagination Testing _(get_all_tasks)_
+### 17.2 Pagination Testing _(get_all_tasks)_
 
 ```
 Get tasks with limit 10 and offset 10 to test pagination
 ```
 
-### 16.3 Large Project Task Retrieval _(get_project_tasks)_
+### 17.3 Large Project Task Retrieval _(get_project_tasks)_
 
 ```
 Get all tasks in the project with the most tasks, using pagination if needed
@@ -492,15 +549,15 @@ Get all tasks in the project with the most tasks, using pagination if needed
 
 ---
 
-## Phase 17: Bulk Delete Operations
+## Phase 18: Bulk Delete Operations
 
-### 17.1 Bulk Task Deletion _(bulk_delete_tasks)_
+### 18.1 Bulk Task Deletion _(bulk_delete_tasks)_
 
 ```
 Delete multiple test tasks at once with confirmation
 ```
 
-### 17.2 Archive Multiple Tasks _(archive_task)_
+### 18.2 Archive Multiple Tasks _(archive_task)_
 
 ```
 Archive all remaining test tasks one by one
@@ -508,24 +565,24 @@ Archive all remaining test tasks one by one
 
 ---
 
-## Phase 18: Final Cleanup & Verification
+## Phase 19: Final Cleanup & Verification
 
-### 18.1 Project Completion _(update_project)_
+### 19.1 Project Completion _(update_project)_
 
 ```
-Mark Sequential Test Project as completed
+Mark fptest main project as completed
 ```
 
-### 18.2 Final Status Check _(get_database_info)_
+### 19.2 Final Status Check _(get_database_info)_
 
 ```
 Get updated database statistics and verify all test operations completed successfully
 ```
 
-### 18.3 Test Cleanup _(delete_task, update_project)_
+### 19.3 Test Cleanup Verification _(search_tasks)_
 
 ```
-Clean up all test projects and verify system state
+Search for all items containing 'fptest' to get final count of test items created
 ```
 
 ---
@@ -534,27 +591,37 @@ Clean up all test projects and verify system state
 
 After completing this test sequence, you should have tested:
 
-✅ **All 36 MCP Tools Covered:**
+✅ **All 35+ MCP Tools Covered:**
 
 - **Task Creation (4/4):** create_task, create_task_in_project, batch_create_tasks, create_subtask
 - **Task Updates (5/5):** update_task, complete_task, uncomplete_task, move_task, bulk_update_tasks
 - **Task Deletion (3/3):** delete_task, archive_task, bulk_delete_tasks
 - **Project Management (5/5):** create_project, update_project, duplicate_project, create_folder, move_project
 - **Tag Management (4/4):** create_tag, assign_tags, remove_tags, get_tagged_items
-- **Read/Query (10/10):** get_all_tasks, get_task_by_id, search_tasks, get_all_projects, get_project_by_id, get_all_tags, get_all_folders, get_perspectives, get_database_info, get_project_tasks, diagnose_connection
+- **Read/Query (11/11):** get_all_tasks, get_task_by_id, search_tasks, get_all_projects, get_project_by_id, get_all_tags, get_all_folders, get_perspectives, get_database_info, get_project_tasks, diagnose_connection
 - **Date/Scheduling (3/3):** parse_natural_date, schedule_tasks_optimally, adjust_dates_bulk
 
 ✅ **Tested Core Features:**
 
-- Database connection and diagnostics
-- Project, folder, and tag creation
-- Task CRUD operations (Create, Read, Update, Delete)
-- Bulk operations and batch processing
-- Search and filtering capabilities
-- Natural language date parsing
-- Optimal task scheduling
-- Error handling for invalid inputs
-- Pagination with large datasets
-- Real-world workflow patterns
+- **Inbox vs Project Task Creation:** Comprehensive testing of create_task behavior with and without projectId
+- **Task Creation Method Validation:** Verification that different creation methods route tasks correctly
+- **Database connection and diagnostics**
+- **Project, folder, and tag creation**
+- **Task CRUD operations (Create, Read, Update, Delete)**
+- **Bulk operations and batch processing**
+- **Search and filtering capabilities**
+- **Natural language date parsing**
+- **Optimal task scheduling**
+- **Error handling for invalid inputs**
+- **Pagination with large datasets**
+- **Real-world workflow patterns**
+- **Task movement between inbox and projects**
 
-This comprehensive test script exercises all 36 MCP tools available in the Focus Pocus server while maintaining a logical, sequential flow that builds realistic test data for thorough validation.
+✅ **Enhanced Coverage Areas:**
+
+- **Explicit Inbox Testing:** Multiple test cases for creating tasks without projects
+- **Task Creation Method Comparison:** Side-by-side validation of create_task vs create_task_in_project
+- **Batch Inbox vs Project Operations:** Testing batch operations with and without project assignment
+- **Task Placement Verification:** Confirmation that tasks end up in expected locations (inbox vs projects)
+
+This comprehensive test script exercises all available MCP tools in the Focus Pocus server while maintaining a logical, sequential flow that builds realistic test data and explicitly validates the critical distinction between inbox and project-based task creation patterns.

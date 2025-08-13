@@ -1,6 +1,27 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // Direct property access is faster and more reliable in OmniFocus 4
+      const value = obj[prop];
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -41,7 +62,7 @@
       if (updates.dueDate) {
         try {
           const dueDate = new Date(updates.dueDate);
-          if (!isNaN(dueDate.getTime()) && dueDate.getFullYear() > 1970) {
+          if (!isNaN(dueDate.getTime())) {
             task.dueDate = dueDate;
           }
         } catch (e) {
@@ -55,7 +76,7 @@
       if (updates.deferDate) {
         try {
           const deferDate = new Date(updates.deferDate);
-          if (!isNaN(deferDate.getTime()) && deferDate.getFullYear() > 1970) {
+          if (!isNaN(deferDate.getTime())) {
             task.deferDate = deferDate;
           }
         } catch (e) {
@@ -68,60 +89,48 @@
     if (updates.estimatedMinutes !== undefined) task.estimatedMinutes = updates.estimatedMinutes;
     if (updates.repetitionRule !== undefined) task.repetitionRule = updates.repetitionRule;
     
-    // Return updated task data - use try-catch for each property to handle conversion errors
-    const result = {};
-    
-    try { result.id = task.id; } catch (e) { result.id = null; }
-    try { result.name = task.name; } catch (e) { result.name = 'Unknown Task'; }
-    try { result.note = task.note || null; } catch (e) { result.note = null; }
-    try { result.completed = task.completed; } catch (e) { result.completed = false; }
-    try { result.completionDate = task.completionDate ? task.completionDate.toISOString() : null; } catch (e) { result.completionDate = null; }
-    try { result.creationDate = task.creationDate ? task.creationDate.toISOString() : null; } catch (e) { result.creationDate = null; }
-    try { result.modificationDate = task.modificationDate ? task.modificationDate.toISOString() : null; } catch (e) { result.modificationDate = null; }
-    try { result.dueDate = task.dueDate ? task.dueDate.toISOString() : null; } catch (e) { result.dueDate = null; }
-    try { result.deferDate = task.deferDate ? task.deferDate.toISOString() : null; } catch (e) { result.deferDate = null; }
-    try { result.estimatedMinutes = task.estimatedMinutes || null; } catch (e) { result.estimatedMinutes = null; }
-    try { result.flagged = task.flagged; } catch (e) { result.flagged = false; }
-    try { result.repetitionRule = task.repetitionRule ? task.repetitionRule.toString() : null; } catch (e) { result.repetitionRule = null; }
-    
-    result.tags = [];
-    result.projectId = null;
-    result.parentTaskId = null;
-    result.containingProjectInfo = null;
+    // Return updated task data - using utility functions
+    const result = {
+      id: safeGet(task, 'id'),
+      name: safeGet(task, 'name', 'Unknown Task'),
+      note: safeGet(task, 'note'),
+      completed: safeGet(task, 'completed', false),
+      completionDate: safeDate(safeGet(task, 'completionDate')),
+      creationDate: safeDate(safeGet(task, 'creationDate')),
+      modificationDate: safeDate(safeGet(task, 'modificationDate')),
+      dueDate: safeDate(safeGet(task, 'dueDate')),
+      deferDate: safeDate(safeGet(task, 'deferDate')),
+      estimatedMinutes: safeGet(task, 'estimatedMinutes'),
+      flagged: safeGet(task, 'flagged', false),
+      repetitionRule: null, // OmniFocus 4 JXA API doesn't reliably expose repetition rules
+      tags: [],
+      projectId: null,
+      parentTaskId: null,
+      containingProjectInfo: null
+    };
     
     // Get tags
-    try {
-      const taskTags = task.tags;
-      if (taskTags && taskTags.length > 0) {
-        for (let j = 0; j < taskTags.length; j++) {
-          try {
-            result.tags.push(taskTags[j].name);
-          } catch (e) {
-            // Skip this tag if conversion fails
-          }
-        }
+    const taskTags = safeGet(task, 'tags');
+    if (taskTags && taskTags.length > 0) {
+      for (let j = 0; j < taskTags.length; j++) {
+        const tagName = safeGet(taskTags[j], 'name');
+        if (tagName) result.tags.push(tagName);
       }
-    } catch (e) {
-      // Tags not accessible
     }
     
     // Get containing project
-    try {
-      const containingProject = task.containingProject;
-      if (containingProject) {
-        try { result.projectId = containingProject.id; } catch (e) { }
-        try {
-          result.containingProjectInfo = {
-            id: containingProject.id,
-            name: containingProject.name,
-            status: containingProject.status
-          };
-        } catch (e) {
-          // Project info might not be accessible
-        }
+    const containingProject = safeGet(task, 'containingProject');
+    if (containingProject) {
+      result.projectId = safeGet(containingProject, 'id');
+      const projectName = safeGet(containingProject, 'name');
+      const projectStatus = safeGet(containingProject, 'status');
+      if (result.projectId) {
+        result.containingProjectInfo = {
+          id: result.projectId,
+          name: projectName,
+          status: projectStatus
+        };
       }
-    } catch (e) {
-      // Project info might not be accessible
     }
     
     return JSON.stringify(result);

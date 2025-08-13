@@ -131,6 +131,35 @@ export class TagOperationsTool {
     return result as boolean;
   }
 
+  async bulkAssignTags(itemIds: string[], tagIds: string[], itemType: 'task' | 'project' = 'task'): Promise<{
+    processedItems: number,
+    successCount: number,
+    errorCount: number,
+    errors?: string[],
+    tagsAssigned: number
+  }> {
+    const response = await JXABridge.execScriptFile('bulk-assign-tags', { itemIds, tagIds, itemType });
+    if (!response.success) {
+      throw new Error(response.error?.message || 'Failed to bulk assign tags');
+    }
+
+    const result = response.data;
+    
+    // Invalidate caches for all affected items
+    for (const itemId of itemIds) {
+      await this.cache.invalidate(`${itemType}:${itemId}:*`);
+    }
+    await this.cache.invalidate('tags:*');
+    
+    return result as {
+      processedItems: number,
+      successCount: number,
+      errorCount: number,
+      errors?: string[],
+      tagsAssigned: number
+    };
+  }
+
   // Legacy context support - maps contexts to tags
   async mapContextsToTags(): Promise<TagExtended[]> {
     const response = await JXABridge.execScriptFile('map-contexts-to-tags', {});

@@ -12,8 +12,9 @@ export class CreateTaskTool {
 
   async createTask(options: CreateTaskOptions): Promise<TaskExtended> {
 
-    // Use JXA script file instead of dangerous inline execSync
-    const response = await JXABridge.execScriptFile('create-task-in-project', { options });
+    // Use appropriate script based on whether projectId is provided
+    const scriptName = options.projectId ? 'create-task-in-project' : 'create-task';
+    const response = await JXABridge.execScriptFile(scriptName, { options });
     
     if (!response.success) {
       throw new Error(response.error?.message || 'Failed to create task');

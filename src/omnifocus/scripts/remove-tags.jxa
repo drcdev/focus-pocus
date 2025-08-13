@@ -1,6 +1,27 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // Direct property access is faster and more reliable in OmniFocus 4
+      const value = obj[prop];
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -23,7 +44,7 @@
         item = doc.flattenedProjects.byId(itemId);
       }
       
-      if (!item || !item.id) {
+      if (!item || !item.id()) {
         throw new Error('Item not found');
       }
     } catch (e) {
@@ -34,32 +55,61 @@
       });
     }
     
-    // Remove specified tags
+    // Use Application.delete() method for tag removal
+    let removedCount = 0;
     try {
-      const currentTags = item.tags;
-      if (currentTags && currentTags.length > 0) {
-        const filteredTags = [];
-        for (let i = 0; i < currentTags.length; i++) {
-          const tag = currentTags[i];
-          let tagId = null;
+      // Get existing tags
+      const existingTags = [];
+      try {
+        const itemTags = item.tags();
+        for (let i = 0; i < itemTags.length; i++) {
+          existingTags.push(itemTags[i]);
+        }
+      } catch (e) {
+        // No existing tags
+        return JSON.stringify({ 
+          success: true, 
+          removedCount: 0,
+          message: "No tags to remove"
+        });
+      }
+      
+      // Find tags to remove by ID
+      const tagsToRemove = [];
+      for (const tagId of tagIds) {
+        for (const existingTag of existingTags) {
           try {
-            tagId = tag.id;
+            if (existingTag.id() === tagId) {
+              tagsToRemove.push(existingTag);
+              break;
+            }
           } catch (e) {
-            // Skip this tag if we can't get its ID
-            continue;
-          }
-          
-          if (!tagIds.includes(tagId)) {
-            filteredTags.push(tag);
+            // Skip invalid tags
           }
         }
-        item.tags = filteredTags;
       }
+      
+      // Remove tags using Application.delete() method
+      if (tagsToRemove.length > 0) {
+        for (const tagToRemove of tagsToRemove) {
+          try {
+            app.delete(tagToRemove, { from: item.tags });
+            removedCount++;
+          } catch (e) {
+            // Skip tags that couldn't be removed
+          }
+        }
+      }
+      
     } catch (e) {
-      throw new Error('Cannot remove tags: ' + e.message);
+      throw new Error(`Failed to remove tags: ${e.message}`);
     }
     
-    return JSON.stringify({ success: true });
+    return JSON.stringify({ 
+      success: true, 
+      removedCount: removedCount,
+      message: `Successfully removed ${removedCount} tag(s)`
+    });
     
   } catch (error) {
     return JSON.stringify({

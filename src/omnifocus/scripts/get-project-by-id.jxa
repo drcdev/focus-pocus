@@ -1,6 +1,27 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // Direct property access is faster and more reliable in OmniFocus 4
+      const value = obj[prop];
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -11,20 +32,36 @@
     
     const doc = app.defaultDocument;
     
-    // Get the project ID from parameters
-    // For now, this is a placeholder - parameter injection would be needed
-    const projectId = '{{projectId}}';
+    // Get the project ID from parameters - injected by JXA bridge
+    const projectId = {{projectId}};
+    
+    // Validate projectId parameter
+    if (!projectId || typeof projectId !== 'string') {
+      return JSON.stringify({
+        error: true,
+        message: 'Project ID parameter is required and must be a string',
+        code: 'INVALID_PARAMETER'
+      });
+    }
     
     let project = null;
     try {
       project = doc.flattenedProjects.byId(projectId);
     } catch (e) {
       // Project not found
-      return JSON.stringify(null);
+      return JSON.stringify({
+        error: true,
+        message: `Project with ID '${projectId}' not found`,
+        code: 'NOT_FOUND'
+      });
     }
     
     if (!project) {
-      return JSON.stringify(null);
+      return JSON.stringify({
+        error: true,
+        message: `Project with ID '${projectId}' not found`,
+        code: 'NOT_FOUND'
+      });
     }
     
     // Return project data - use try-catch for each property to handle conversion errors
@@ -34,29 +71,148 @@
       taskCount: 0,
       completedTaskCount: 0,
       remainingTaskCount: 0,
-      nextTaskId: null
+      availableTaskCount: 0,
+      nextTaskId: null,
+      sequential: false,
+      projectType: 'parallel'
     };
     
-    // Safe property access for core properties
-    try { projectData.id = project.id; } catch (e) { projectData.id = null; }
-    try { projectData.name = project.name; } catch (e) { projectData.name = 'Unknown Project'; }
-    try { projectData.note = project.note || null; } catch (e) { projectData.note = null; }
-    try { projectData.status = project.status; } catch (e) { projectData.status = 'active'; }
-    try { projectData.creationDate = project.creationDate ? project.creationDate.toISOString() : null; } catch (e) { projectData.creationDate = null; }
-    try { projectData.modificationDate = project.modificationDate ? project.modificationDate.toISOString() : null; } catch (e) { projectData.modificationDate = null; }
-    try { projectData.completionDate = project.completionDate ? project.completionDate.toISOString() : null; } catch (e) { projectData.completionDate = null; }
-    try { projectData.dueDate = project.dueDate ? project.dueDate.toISOString() : null; } catch (e) { projectData.dueDate = null; }
-    try { projectData.deferDate = project.deferDate ? project.deferDate.toISOString() : null; } catch (e) { projectData.deferDate = null; }
-    try { projectData.estimatedMinutes = project.estimatedMinutes || null; } catch (e) { projectData.estimatedMinutes = null; }
-    try { projectData.flagged = project.flagged; } catch (e) { projectData.flagged = false; }
+    // Safe property access for core properties with dual approach
+    try { 
+      const projectId = project.id();
+      if (projectId) projectData.id = projectId;
+    } catch (e) { 
+      try {
+        const projectId = project.id;
+        if (projectId) projectData.id = projectId;
+      } catch (e2) { projectData.id = null; }
+    }
+    try { 
+      const projectName = project.name();
+      if (projectName) projectData.name = projectName;
+    } catch (e) { 
+      try {
+        const projectName = project.name;
+        if (projectName) projectData.name = projectName;
+      } catch (e2) { projectData.name = 'Unknown Project'; }
+    }
+    try { 
+      const projectNote = project.note();
+      projectData.note = projectNote || null;
+    } catch (e) { 
+      try {
+        const projectNote = project.note;
+        projectData.note = projectNote || null;
+      } catch (e2) { projectData.note = null; }
+    }
+    try { 
+      const projectStatus = project.status();
+      projectData.status = projectStatus;
+    } catch (e) { 
+      try {
+        const projectStatus = project.status;
+        projectData.status = projectStatus;
+      } catch (e2) { projectData.status = 'active'; }
+    }
+    try { 
+      const creationDate = project.creationDate();
+      projectData.creationDate = creationDate ? creationDate.toISOString() : null;
+    } catch (e) { 
+      try {
+        const creationDate = project.creationDate;
+        projectData.creationDate = creationDate ? creationDate.toISOString() : null;
+      } catch (e2) { projectData.creationDate = null; }
+    }
+    try { 
+      const modificationDate = project.modificationDate();
+      projectData.modificationDate = modificationDate ? modificationDate.toISOString() : null;
+    } catch (e) { 
+      try {
+        const modificationDate = project.modificationDate;
+        projectData.modificationDate = modificationDate ? modificationDate.toISOString() : null;
+      } catch (e2) { projectData.modificationDate = null; }
+    }
+    try { 
+      const completionDate = project.completionDate();
+      projectData.completionDate = completionDate ? completionDate.toISOString() : null;
+    } catch (e) { 
+      try {
+        const completionDate = project.completionDate;
+        projectData.completionDate = completionDate ? completionDate.toISOString() : null;
+      } catch (e2) { projectData.completionDate = null; }
+    }
+    try { 
+      const dueDate = project.dueDate();
+      projectData.dueDate = dueDate ? dueDate.toISOString() : null;
+    } catch (e) { 
+      try {
+        const dueDate = project.dueDate;
+        projectData.dueDate = dueDate ? dueDate.toISOString() : null;
+      } catch (e2) { projectData.dueDate = null; }
+    }
+    try { 
+      const deferDate = project.deferDate();
+      projectData.deferDate = deferDate ? deferDate.toISOString() : null;
+    } catch (e) { 
+      try {
+        const deferDate = project.deferDate;
+        projectData.deferDate = deferDate ? deferDate.toISOString() : null;
+      } catch (e2) { projectData.deferDate = null; }
+    }
+    try { 
+      const estimatedMinutes = project.estimatedMinutes();
+      projectData.estimatedMinutes = estimatedMinutes || null;
+    } catch (e) { 
+      try {
+        const estimatedMinutes = project.estimatedMinutes;
+        projectData.estimatedMinutes = estimatedMinutes || null;
+      } catch (e2) { projectData.estimatedMinutes = null; }
+    }
+    try { 
+      const isFlagged = project.flagged();
+      projectData.flagged = isFlagged;
+    } catch (e) { 
+      try {
+        const isFlagged = project.flagged;
+        projectData.flagged = isFlagged;
+      } catch (e2) { projectData.flagged = false; }
+    }
     
-    // Get tags safely
+    // Get sequential property with dual approach
+    try { 
+      const isSequential = project.sequential();
+      projectData.sequential = isSequential;
+      projectData.projectType = isSequential ? 'sequential' : 'parallel';
+    } catch (e) { 
+      try {
+        const isSequential = project.sequential;
+        projectData.sequential = isSequential;
+        projectData.projectType = isSequential ? 'sequential' : 'parallel';
+      } catch (e2) { 
+        projectData.sequential = false; 
+        projectData.projectType = 'parallel';
+      }
+    }
+    
+    // Get tags safely with dual approach
     try {
-      const projectTags = project.tags;
+      let projectTags;
+      try {
+        projectTags = project.tags();
+      } catch (e) {
+        projectTags = project.tags;
+      }
+      
       if (projectTags && projectTags.length > 0) {
         for (let j = 0; j < projectTags.length; j++) {
           try {
-            projectData.tags.push(projectTags[j].name);
+            let tagName;
+            try {
+              tagName = projectTags[j].name();
+            } catch (e) {
+              tagName = projectTags[j].name;
+            }
+            if (tagName) projectData.tags.push(tagName);
           } catch (e) {
             // Skip this tag if conversion fails
           }
@@ -66,27 +222,85 @@
       // Tags not accessible
     }
     
-    // Get containing folder safely
+    // Get containing folder safely with dual approach
     try {
-      const containingFolder = project.folder;
-      if (containingFolder && containingFolder.id) {
-        projectData.folderId = containingFolder.id;
+      let containingFolder;
+      try {
+        containingFolder = project.folder();
+      } catch (e) {
+        containingFolder = project.folder;
+      }
+      
+      if (containingFolder) {
+        try {
+          let folderId;
+          try {
+            folderId = containingFolder.id();
+          } catch (e) {
+            folderId = containingFolder.id;
+          }
+          if (folderId) projectData.folderId = folderId;
+        } catch (e) {
+          // Folder ID not accessible
+        }
       }
     } catch (e) {
       // Folder not accessible
     }
     
-    // Get task counts safely
+    // Allow brief sync time for newly created projects
+    delay(0.1);
+    
+    // Get task counts safely with dual approach - try both tasks and flattenedTasks
     try {
-      const tasks = project.tasks;
+      let tasks;
+      try {
+        tasks = project.tasks();
+      } catch (e) {
+        tasks = project.tasks;
+      }
+      
+      // If direct tasks is empty, try flattenedTasks as fallback
+      if (!tasks || tasks.length === 0) {
+        try {
+          tasks = project.flattenedTasks();
+        } catch (e) {
+          tasks = project.flattenedTasks;
+        }
+      }
+      
       if (tasks) {
         projectData.taskCount = tasks.length;
         
         let completedCount = 0;
+        let availableCount = 0;
         for (let k = 0; k < tasks.length; k++) {
           try {
-            if (tasks[k].completed) {
+            let isCompleted;
+            try {
+              isCompleted = tasks[k].completed();
+            } catch (e) {
+              isCompleted = tasks[k].completed;
+            }
+            
+            if (isCompleted) {
               completedCount++;
+            } else {
+              // Check if task is available (not blocked or dropped)
+              try {
+                let taskStatus;
+                try {
+                  taskStatus = tasks[k].taskStatus();
+                } catch (e) {
+                  taskStatus = tasks[k].taskStatus;
+                }
+                if (taskStatus === 'Available') {
+                  availableCount++;
+                }
+              } catch (e) {
+                // If we can't get status, assume available if not completed
+                availableCount++;
+              }
             }
           } catch (e) {
             // Skip this task if completion status fails
@@ -95,16 +309,33 @@
         
         projectData.completedTaskCount = completedCount;
         projectData.remainingTaskCount = projectData.taskCount - completedCount;
+        projectData.availableTaskCount = availableCount;
       }
     } catch (e) {
       // Task counts not accessible
     }
     
-    // Get next task safely
+    // Get next task safely with dual approach
     try {
-      const nextTask = project.nextTask;
-      if (nextTask && nextTask.id) {
-        projectData.nextTaskId = nextTask.id;
+      let nextTask;
+      try {
+        nextTask = project.nextTask();
+      } catch (e) {
+        nextTask = project.nextTask;
+      }
+      
+      if (nextTask) {
+        try {
+          let nextTaskId;
+          try {
+            nextTaskId = nextTask.id();
+          } catch (e) {
+            nextTaskId = nextTask.id;
+          }
+          if (nextTaskId) projectData.nextTaskId = nextTaskId;
+        } catch (e) {
+          // Next task ID not accessible
+        }
       }
     } catch (e) {
       // Next task not accessible

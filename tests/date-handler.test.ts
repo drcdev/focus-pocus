@@ -126,6 +126,54 @@ describe('DateHandler', () => {
       });
     });
 
+    describe('complex time patterns', () => {
+      it('should parse "next Monday at 2pm"', () => {
+        const result = dateHandler.parseNaturalDate('next Monday at 2pm', fixedDate);
+        expect(result).toBeInstanceOf(Date);
+        expect(result!.getDay()).toBe(1); // Monday
+        expect(result!.getHours()).toBe(14); // 2 PM
+      });
+
+      it('should parse "next friday at 9am"', () => {
+        const result = dateHandler.parseNaturalDate('next friday at 9am', fixedDate);
+        expect(result).toBeInstanceOf(Date);
+        expect(result!.getDay()).toBe(5); // Friday
+        expect(result!.getHours()).toBe(9); // 9 AM
+      });
+
+      it('should parse "tomorrow morning"', () => {
+        const result = dateHandler.parseNaturalDate('tomorrow morning', fixedDate);
+        expect(result).toBeInstanceOf(Date);
+        expect(result!.getHours()).toBe(9); // 9 AM
+        expect(result!.getDate()).toBe(fixedDate.getDate() + 1);
+      });
+
+      it('should parse "today afternoon"', () => {
+        const result = dateHandler.parseNaturalDate('today afternoon', fixedDate);
+        expect(result).toBeInstanceOf(Date);
+        expect(result!.getHours()).toBe(14); // 2 PM
+      });
+
+      it('should parse "end of next month"', () => {
+        const result = dateHandler.parseNaturalDate('end of next month', fixedDate);
+        expect(result).toBeInstanceOf(Date);
+        
+        // Should be last day of next month
+        const nextMonth = new Date(fixedDate);
+        nextMonth.setMonth(nextMonth.getMonth() + 1);
+        const lastDayOfNextMonth = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0);
+        
+        expect(result!.getMonth()).toBe(lastDayOfNextMonth.getMonth());
+        expect(result!.getDate()).toBe(lastDayOfNextMonth.getDate());
+      });
+
+      it('should parse "end of next week"', () => {
+        const result = dateHandler.parseNaturalDate('end of next week', fixedDate);
+        expect(result).toBeInstanceOf(Date);
+        expect(result!.getDay()).toBe(0); // Sunday (end of week)
+      });
+    });
+
     describe('edge cases', () => {
       it('should handle case insensitive input', () => {
         const result1 = dateHandler.parseNaturalDate('TODAY', fixedDate);

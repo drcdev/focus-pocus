@@ -1,6 +1,27 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // Direct property access is faster and more reliable in OmniFocus 4
+      const value = obj[prop];
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -14,34 +35,43 @@
     const doc = app.defaultDocument;
     
     const project = doc.flattenedProjects.byId(projectId);
-    if (!project || !project.id()) {
+    if (!project || !safeGet(project, 'id')) {
       throw new Error('Project not found');
     }
     
-    // Determine target container
-    if (targetFolderId) {
+    // Determine target container and move project  
+    if (targetFolderId && targetFolderId !== null && targetFolderId !== 'null' && targetFolderId !== undefined && targetFolderId !== 'undefined') {
       const targetFolder = doc.flattenedFolders.byId(targetFolderId);
-      if (!targetFolder || !targetFolder.id()) {
+      if (!targetFolder || !safeGet(targetFolder, 'id')) {
         throw new Error('Target folder not found');
       }
-      project.container = targetFolder;
+      // Move project to folder by setting container
+      try {
+        project.container = targetFolder;
+      } catch (e) {
+        throw new Error('Failed to move project to folder: ' + e.message);
+      }
     } else {
-      // Move to root
-      project.container = doc;
+      // Move to root by setting container to document
+      try {
+        project.container = doc;
+      } catch (e) {
+        throw new Error('Failed to move project to root: ' + e.message);
+      }
     }
     
     // Build result
     const result = {
-      id: project.id(),
-      name: project.name(),
-      note: project.note() || '',
-      status: project.status(),
-      flagged: project.flagged(),
-      dueDate: project.dueDate() ? project.dueDate().toISOString() : null,
-      deferDate: project.deferDate() ? project.deferDate().toISOString() : null,
-      completionDate: project.completionDate() ? project.completionDate().toISOString() : null,
-      sequential: project.sequential(),
-      estimatedMinutes: project.estimatedMinutes() || null,
+      id: safeGet(project, 'id'),
+      name: safeGet(project, 'name'),
+      note: safeGet(project, 'note', ''),
+      status: safeGet(project, 'status'),
+      flagged: safeGet(project, 'flagged', false),
+      dueDate: safeDate(safeGet(project, 'dueDate')),
+      deferDate: safeDate(safeGet(project, 'deferDate')),
+      completionDate: safeDate(safeGet(project, 'completionDate')),
+      sequential: safeGet(project, 'sequential', false),
+      estimatedMinutes: safeGet(project, 'estimatedMinutes'),
       folderId: null,
       taskCount: 0,
       availableTaskCount: 0,
@@ -49,31 +79,27 @@
     };
     
     // Get folder ID safely
-    try {
-      const container = project.container();
-      if (container && container.class() === 'folder') {
-        result.folderId = container.id();
-      }
-    } catch (e) {
-      // Container might not exist
+    const container = safeGet(project, 'container');
+    if (container && safeGet(container, 'class') === 'folder') {
+      result.folderId = safeGet(container, 'id');
     }
     
     // Get task counts safely
-    try {
-      result.taskCount = project.tasks().length;
-      result.availableTaskCount = project.availableTasks().length;
-    } catch (e) {
-      // Task counts might fail
-    }
+    const tasks = safeGet(project, 'tasks');
+    const availableTasks = safeGet(project, 'availableTasks');
+    result.taskCount = tasks ? tasks.length : 0;
+    result.availableTaskCount = availableTasks ? availableTasks.length : 0;
     
     // Get tags safely
-    try {
-      const projectTags = project.tags();
+    const projectTags = safeGet(project, 'tags');
+    if (projectTags) {
       for (let i = 0; i < projectTags.length; i++) {
-        result.tags.push({ id: projectTags[i].id(), name: projectTags[i].name() });
+        const tagId = safeGet(projectTags[i], 'id');
+        const tagName = safeGet(projectTags[i], 'name');
+        if (tagId && tagName) {
+          result.tags.push({ id: tagId, name: tagName });
+        }
       }
-    } catch (e) {
-      // Tags might fail to load
     }
     
     return JSON.stringify(result);

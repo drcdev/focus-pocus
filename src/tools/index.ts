@@ -244,7 +244,7 @@ export class MCPToolRegistry {
             name: { type: 'string', description: 'Project name' },
             note: { type: 'string', description: 'Project note/description' },
             folderId: { type: 'string', description: 'Folder ID to place project in' },
-            status: { type: 'string', enum: ['active', 'on-hold', 'completed', 'dropped'], description: 'Project status' },
+            status: { type: 'string', enum: ['active status', 'on hold status', 'done status', 'dropped status'], description: 'Project status' },
             sequential: { type: 'boolean', description: 'Whether project is sequential' },
             flagged: { type: 'boolean', description: 'Whether project is flagged' },
             dueDate: { type: 'string', description: 'Project due date' },
@@ -264,7 +264,7 @@ export class MCPToolRegistry {
             projectId: { type: 'string', description: 'Project ID to update' },
             name: { type: 'string', description: 'New project name' },
             note: { type: 'string', description: 'New project note/description' },
-            status: { type: 'string', enum: ['active', 'on-hold', 'completed', 'dropped'], description: 'Project status' },
+            status: { type: 'string', enum: ['active status', 'on hold status', 'done status', 'dropped status'], description: 'Project status' },
             sequential: { type: 'boolean', description: 'Whether project is sequential' },
             flagged: { type: 'boolean', description: 'Whether project is flagged' },
             dueDate: { type: 'string', description: 'Project due date' },
@@ -362,6 +362,19 @@ export class MCPToolRegistry {
             itemType: { type: 'string', enum: ['all', 'tasks', 'projects'], default: 'all', description: 'Type of items to return' }
           },
           required: ['tagId']
+        }
+      },
+      {
+        name: 'bulk_assign_tags',
+        description: 'Assign tags to multiple tasks or projects in a single operation',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            itemIds: { type: 'array', items: { type: 'string' }, description: 'Array of task or project IDs' },
+            tagIds: { type: 'array', items: { type: 'string' }, description: 'Array of tag IDs to assign' },
+            itemType: { type: 'string', enum: ['task', 'project'], default: 'task', description: 'Type of items' }
+          },
+          required: ['itemIds', 'tagIds']
         }
       },
 
@@ -585,11 +598,11 @@ export class MCPToolRegistry {
         case 'create_task':
           return await this.handleCreateTask(args);
         case 'create_task_in_project':
-          return await this.createTaskTool.createTaskInProject(args.projectId, args);
+          return await this.handleCreateTaskInProject(args);
         case 'batch_create_tasks':
-          return await this.createTaskTool.batchCreateTasks(args);
+          return await this.handleBatchCreateTasks(args);
         case 'create_subtask':
-          return await this.createTaskTool.createSubtask(args.parentTaskId, args);
+          return await this.handleCreateSubtask(args);
 
         // Task Updates
         case 'update_task':
@@ -632,6 +645,8 @@ export class MCPToolRegistry {
           return await this.tagTool.removeTags(args.itemId, args.tagIds, args.itemType);
         case 'get_tagged_items':
           return await this.tagTool.getTaggedItems(args.tagId, args.itemType);
+        case 'bulk_assign_tags':
+          return await this.tagTool.bulkAssignTags(args.itemIds, args.tagIds, args.itemType);
 
         // Read/Query Operations
         case 'get_all_tasks':
@@ -704,6 +719,103 @@ export class MCPToolRegistry {
     }
     
     return await this.createTaskTool.createTask(options);
+  }
+
+  private async handleCreateTaskInProject(args: any) {
+    const options = { ...args };
+    delete options.projectId;
+    
+    if (args.dueDate) {
+      if (typeof args.dueDate === 'string') {
+        const parsedDate = this.dateHandler.parseNaturalDate(args.dueDate);
+        if (parsedDate) {
+          options.dueDate = parsedDate.toISOString();
+        } else {
+          throw new Error(`Could not parse due date: "${args.dueDate}"`);
+        }
+      } else if (args.dueDate instanceof Date) {
+        options.dueDate = args.dueDate.toISOString();
+      }
+    }
+    if (args.deferDate) {
+      if (typeof args.deferDate === 'string') {
+        const parsedDate = this.dateHandler.parseNaturalDate(args.deferDate);
+        if (parsedDate) {
+          options.deferDate = parsedDate.toISOString();
+        } else {
+          throw new Error(`Could not parse defer date: "${args.deferDate}"`);
+        }
+      } else if (args.deferDate instanceof Date) {
+        options.deferDate = args.deferDate.toISOString();
+      }
+    }
+    
+    return await this.createTaskTool.createTaskInProject(args.projectId, options);
+  }
+
+  private async handleCreateSubtask(args: any) {
+    const options = { ...args };
+    delete options.parentTaskId;
+    
+    if (args.dueDate) {
+      if (typeof args.dueDate === 'string') {
+        const parsedDate = this.dateHandler.parseNaturalDate(args.dueDate);
+        if (parsedDate) {
+          options.dueDate = parsedDate.toISOString();
+        } else {
+          throw new Error(`Could not parse due date: "${args.dueDate}"`);
+        }
+      } else if (args.dueDate instanceof Date) {
+        options.dueDate = args.dueDate.toISOString();
+      }
+    }
+    if (args.deferDate) {
+      if (typeof args.deferDate === 'string') {
+        const parsedDate = this.dateHandler.parseNaturalDate(args.deferDate);
+        if (parsedDate) {
+          options.deferDate = parsedDate.toISOString();
+        } else {
+          throw new Error(`Could not parse defer date: "${args.deferDate}"`);
+        }
+      } else if (args.deferDate instanceof Date) {
+        options.deferDate = args.deferDate.toISOString();
+      }
+    }
+    
+    return await this.createTaskTool.createSubtask(args.parentTaskId, options);
+  }
+
+  private async handleBatchCreateTasks(args: any) {
+    const options = { ...args };
+    
+    // Process dates in each task
+    if (options.tasks && Array.isArray(options.tasks)) {
+      for (const task of options.tasks) {
+        if (task.dueDate && typeof task.dueDate === 'string') {
+          const parsedDate = this.dateHandler.parseNaturalDate(task.dueDate);
+          if (parsedDate) {
+            task.dueDate = parsedDate.toISOString();
+          } else {
+            throw new Error(`Could not parse due date: "${task.dueDate}" for task "${task.name}"`);
+          }
+        } else if (task.dueDate instanceof Date) {
+          task.dueDate = task.dueDate.toISOString();
+        }
+        
+        if (task.deferDate && typeof task.deferDate === 'string') {
+          const parsedDate = this.dateHandler.parseNaturalDate(task.deferDate);
+          if (parsedDate) {
+            task.deferDate = parsedDate.toISOString();
+          } else {
+            throw new Error(`Could not parse defer date: "${task.deferDate}" for task "${task.name}"`);
+          }
+        } else if (task.deferDate instanceof Date) {
+          task.deferDate = task.deferDate.toISOString();
+        }
+      }
+    }
+    
+    return await this.createTaskTool.batchCreateTasks(options);
   }
 
   private async handleUpdateTask(args: any) {

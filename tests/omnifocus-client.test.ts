@@ -440,6 +440,52 @@ describe('OmniFocusClient', () => {
     });
   });
 
+  describe('direct JXA script execution', () => {
+    beforeEach(async () => {
+      mockJXABridge.checkOmniFocusAvailability.mockResolvedValue(true);
+      mockJXABridge.requestPermissions.mockResolvedValue(true);
+      mockJXABridge.execScriptFile.mockResolvedValue({
+        success: true,
+        data: { name: 'Test Database', path: '/test/path', isDefault: true }
+      });
+      await client.initialize();
+      jest.clearAllMocks();
+    });
+
+    it('should execute JXA script successfully', async () => {
+      const mockResult = { id: 'test-result', data: 'success' };
+      mockJXABridge.execSync.mockReturnValue(JSON.stringify(mockResult));
+
+      const result = await client.executeJXA('return "test script";');
+
+      expect(result).toEqual(mockResult);
+    });
+
+    it('should handle JXA script errors', async () => {
+      mockJXABridge.execSync.mockImplementation(() => {
+        throw new Error('Script execution failed');
+      });
+
+      await expect(client.executeJXA('invalid script')).rejects.toThrow('Script execution failed');
+    });
+
+    it('should use retry logic for JXA execution', async () => {
+      let callCount = 0;
+      mockJXABridge.execSync.mockImplementation(() => {
+        callCount++;
+        if (callCount < 2) {
+          throw new Error('application is not running');
+        }
+        return JSON.stringify({ success: true });
+      });
+
+      const result = await client.executeJXA('test script');
+
+      expect(result).toEqual({ success: true });
+      expect(mockJXABridge.execSync).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe('retry logic', () => {
     beforeEach(() => {
       // Start with disconnected state

@@ -1,6 +1,33 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // OmniFocus 4 requires function call syntax for property access
+      const value = obj[prop]();
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      // Fallback to direct property access for compatibility
+      try {
+        const directValue = obj[prop];
+        return directValue !== undefined ? directValue : defaultValue;
+      } catch (e2) {
+        return defaultValue;
+      }
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -20,7 +47,7 @@
     let foundTask = null;
     try {
       foundTask = doc.flattenedTasks.byId(taskId);
-      if (!foundTask || !foundTask.id) {
+      if (!foundTask || !foundTask.id()) {
         throw new Error('Task not found');
       }
     } catch (e) {
@@ -32,68 +59,72 @@
       });
     }
     
-    // Build task data with safe property access
+    // Build task data with optimized property access
     const taskData = {
+      id: safeGet(foundTask, 'id'),
+      name: safeGet(foundTask, 'name', 'Unknown Task'),
+      note: safeGet(foundTask, 'note'),
+      completed: safeGet(foundTask, 'completed', false),
+      completionDate: safeDate(safeGet(foundTask, 'completionDate')),
+      creationDate: safeDate(safeGet(foundTask, 'creationDate')),
+      modificationDate: safeDate(safeGet(foundTask, 'modificationDate')),
+      dueDate: safeDate(safeGet(foundTask, 'dueDate')),
+      deferDate: safeDate(safeGet(foundTask, 'deferDate')),
+      estimatedMinutes: safeGet(foundTask, 'estimatedMinutes'),
+      flagged: safeGet(foundTask, 'flagged', false),
+      repetitionRule: null,
       tags: [],
       projectId: null,
       parentTaskId: null,
       containingProjectInfo: null
     };
     
-    // Use try-catch for each property to handle conversion errors
-    try { taskData.id = foundTask.id; } catch (e) { taskData.id = null; }
-    try { taskData.name = foundTask.name; } catch (e) { taskData.name = 'Unknown Task'; }
-    try { taskData.note = foundTask.note || null; } catch (e) { taskData.note = null; }
-    try { taskData.completed = foundTask.completed; } catch (e) { taskData.completed = false; }
-    try { taskData.completionDate = foundTask.completionDate ? foundTask.completionDate.toISOString() : null; } catch (e) { taskData.completionDate = null; }
-    try { taskData.creationDate = foundTask.creationDate ? foundTask.creationDate.toISOString() : null; } catch (e) { taskData.creationDate = null; }
-    try { taskData.modificationDate = foundTask.modificationDate ? foundTask.modificationDate.toISOString() : null; } catch (e) { taskData.modificationDate = null; }
-    try { taskData.dueDate = foundTask.dueDate ? foundTask.dueDate.toISOString() : null; } catch (e) { taskData.dueDate = null; }
-    try { taskData.deferDate = foundTask.deferDate ? foundTask.deferDate.toISOString() : null; } catch (e) { taskData.deferDate = null; }
-    try { taskData.estimatedMinutes = foundTask.estimatedMinutes || null; } catch (e) { taskData.estimatedMinutes = null; }
-    try { taskData.flagged = foundTask.flagged; } catch (e) { taskData.flagged = false; }
-    try { taskData.repetitionRule = foundTask.repetitionRule ? foundTask.repetitionRule.toString() : null; } catch (e) { taskData.repetitionRule = null; }
+    // Handle repetition rule conversion
+    const repRule = safeGet(foundTask, 'repetitionRule');
+    if (repRule) {
+      try {
+        taskData.repetitionRule = repRule.toString();
+      } catch (e) {
+        taskData.repetitionRule = null;
+      }
+    }
     
-    // Get tags
+    // Get tags efficiently
     try {
-      const taskTags = foundTask.tags;
+      const taskTags = foundTask.tags();
       if (taskTags && taskTags.length > 0) {
         for (let j = 0; j < taskTags.length; j++) {
-          try {
-            taskData.tags.push(taskTags[j].name);
-          } catch (e) {
-            // Skip this tag if conversion fails
-          }
+          const tagName = safeGet(taskTags[j], 'name');
+          if (tagName) taskData.tags.push(tagName);
         }
       }
     } catch (e) {
       // Tags not accessible
     }
     
-    // Get containing project
+    // Get containing project efficiently
     try {
-      const containingProject = foundTask.containingProject;
+      const containingProject = foundTask.containingProject();
       if (containingProject) {
-        try { taskData.projectId = containingProject.id; } catch (e) { }
-        try {
+        const projectId = safeGet(containingProject, 'id');
+        if (projectId) {
+          taskData.projectId = projectId;
           taskData.containingProjectInfo = {
-            id: containingProject.id,
-            name: containingProject.name,
-            status: containingProject.status
+            id: projectId,
+            name: safeGet(containingProject, 'name', 'Unknown Project'),
+            status: safeGet(containingProject, 'status', 'active')
           };
-        } catch (e) {
-          // Project info might not be accessible
         }
       }
     } catch (e) {
       // Project info might not be accessible
     }
     
-    // Get parent task
+    // Get parent task efficiently
     try {
-      const parentTask = foundTask.parentTask;
+      const parentTask = foundTask.parentTask();
       if (parentTask) {
-        try { taskData.parentTaskId = parentTask.id; } catch (e) { }
+        taskData.parentTaskId = safeGet(parentTask, 'id');
       }
     } catch (e) {
       // Parent task info might not be accessible

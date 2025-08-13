@@ -1,6 +1,27 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // Direct property access is faster and more reliable in OmniFocus 4
+      const value = obj[prop];
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -35,12 +56,30 @@
     
     if (options.note) taskProps.note = options.note;
     if (options.flagged !== undefined) taskProps.flagged = options.flagged;
-    if (options.dueDate) taskProps.dueDate = new Date(options.dueDate);
-    if (options.deferDate) taskProps.deferDate = new Date(options.deferDate);
+    if (options.dueDate) {
+      try {
+        const dueDate = new Date(options.dueDate);
+        if (!isNaN(dueDate.getTime())) {
+          taskProps.dueDate = dueDate;
+        }
+      } catch (e) {
+        // Invalid date, skip setting
+      }
+    }
+    if (options.deferDate) {
+      try {
+        const deferDate = new Date(options.deferDate);
+        if (!isNaN(deferDate.getTime())) {
+          taskProps.deferDate = deferDate;
+        }
+      } catch (e) {
+        // Invalid date, skip setting
+      }
+    }
     if (options.estimatedMinutes) taskProps.estimatedMinutes = options.estimatedMinutes;
     if (options.repetitionRule) taskProps.repetitionRule = options.repetitionRule;
     
-    // Create subtask
+    // Create subtask using proper JXA syntax
     const subtask = app.Task(taskProps);
     parentTask.tasks.push(subtask);
     

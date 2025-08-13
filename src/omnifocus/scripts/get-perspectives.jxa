@@ -1,6 +1,27 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // Direct property access is faster and more reliable in OmniFocus 4
+      const value = obj[prop];
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -30,8 +51,8 @@
     try {
       const doc = app.defaultDocument;
       
-      if (doc.perspectives) {
-        const customPerspectives = doc.perspectives();
+      if (safeGet(doc, 'perspectives')) {
+        const customPerspectives = safeGet(doc, 'perspectives');
         
         // Add a placeholder indicating custom perspectives exist but can't be enumerated
         if (customPerspectives && customPerspectives.length > 7) { // More than built-ins

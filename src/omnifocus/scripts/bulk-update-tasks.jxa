@@ -1,6 +1,27 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // Direct property access is faster and more reliable in OmniFocus 4
+      const value = obj[prop];
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+  
+  // Utility function for safe date conversion
+  function safeDate(dateValue) {
+    if (!dateValue) return null;
+    try {
+      return dateValue.toISOString();
+    } catch (e) {
+      return null;
+    }
+  }
+  
   try {
     const app = Application('OmniFocus');
     app.includeStandardAdditions = true;
@@ -18,7 +39,7 @@
     for (const taskId of taskIds) {
       try {
         const task = doc.flattenedTasks.byId(taskId);
-        if (!task || !task.id()) {
+        if (!task || !safeGet(task, 'id')) {
           continue; // Skip non-existent tasks
         }
         
@@ -33,18 +54,18 @@
         
         // Build result
         const result = {
-          id: task.id(),
-          name: task.name(),
-          note: task.note() || null,
-          completed: task.completed(),
-          completionDate: task.completionDate() ? task.completionDate().toISOString() : null,
-          creationDate: task.creationDate().toISOString(),
-          modificationDate: task.modificationDate().toISOString(),
-          dueDate: task.dueDate() ? task.dueDate().toISOString() : null,
-          deferDate: task.deferDate() ? task.deferDate().toISOString() : null,
-          estimatedMinutes: task.estimatedMinutes() || null,
-          flagged: task.flagged(),
-          repetitionRule: task.repetitionRule() ? task.repetitionRule().toString() : null,
+          id: safeGet(task, 'id'),
+          name: safeGet(task, 'name'),
+          note: safeGet(task, 'note'),
+          completed: safeGet(task, 'completed', false),
+          completionDate: safeDate(safeGet(task, 'completionDate')),
+          creationDate: safeDate(safeGet(task, 'creationDate')),
+          modificationDate: safeDate(safeGet(task, 'modificationDate')),
+          dueDate: safeDate(safeGet(task, 'dueDate')),
+          deferDate: safeDate(safeGet(task, 'deferDate')),
+          estimatedMinutes: safeGet(task, 'estimatedMinutes'),
+          flagged: safeGet(task, 'flagged', false),
+          repetitionRule: safeGet(task, 'repetitionRule') ? safeGet(task, 'repetitionRule').toString() : null,
           tags: [],
           projectId: null,
           parentTaskId: null,
@@ -52,26 +73,25 @@
         };
         
         // Get tags
-        const taskTags = task.tags();
+        const taskTags = safeGet(task, 'tags');
         if (taskTags && taskTags.length > 0) {
           for (let j = 0; j < taskTags.length; j++) {
-            result.tags.push(taskTags[j].name());
+            const tagName = safeGet(taskTags[j], 'name');
+            if (tagName) {
+              result.tags.push(tagName);
+            }
           }
         }
         
         // Get containing project
-        try {
-          const containingProject = task.containingProject();
-          if (containingProject) {
-            result.projectId = containingProject.id();
-            result.containingProjectInfo = {
-              id: containingProject.id(),
-              name: containingProject.name(),
-              status: containingProject.status()
-            };
-          }
-        } catch (e) {
-          // Project info might not be accessible
+        const containingProject = safeGet(task, 'containingProject');
+        if (containingProject) {
+          result.projectId = safeGet(containingProject, 'id');
+          result.containingProjectInfo = {
+            id: safeGet(containingProject, 'id'),
+            name: safeGet(containingProject, 'name'),
+            status: safeGet(containingProject, 'status')
+          };
         }
         
         results.push(result);

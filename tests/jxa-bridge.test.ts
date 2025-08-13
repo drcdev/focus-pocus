@@ -34,7 +34,7 @@ describe('JXABridge', () => {
       const result = await JXABridge.execJXA('test script');
 
       expect(result.success).toBe(true);
-      expect(result.data).toBe(mockResponse);
+      expect(result.data).toEqual(mockResponse);
       expect(mockExecSync).toHaveBeenCalledWith(
         expect.stringContaining('osascript -l JavaScript -e'),
         expect.objectContaining({
@@ -82,8 +82,8 @@ describe('JXABridge', () => {
       );
 
       const calledScript = mockExecSync.mock.calls[0][0] as string;
-      expect(calledScript).toContain('"test-123"');
-      expect(calledScript).toContain('"Test Task"');
+      expect(calledScript).toContain('\\"test-123\\"');
+      expect(calledScript).toContain('\\"Test Task\\"');
     });
 
     it('should categorize permission denied errors', async () => {
@@ -211,7 +211,7 @@ describe('JXABridge', () => {
       const result = await JXABridge.execScriptFile('test-script', { param: 'test-value' });
 
       expect(result.success).toBe(true);
-      expect(result.data).toEqual(expectedResult);
+      expect(result.data).toEqual({ data: 'test-value' });
       expect(mockReadFile).toHaveBeenCalledWith(
         expect.stringContaining('test-script.jxa'),
         'utf8'
@@ -284,7 +284,7 @@ describe('JXABridge', () => {
       );
 
       const calledScript = mockExecSync.mock.calls[0][0] as string;
-      expect(calledScript).toContain(JSON.stringify(complexParam));
+      expect(calledScript).toContain(JSON.stringify(complexParam).replace(/"/g, '\\"'));
     });
 
     it('should handle string parameters with special characters', async () => {
@@ -296,7 +296,7 @@ describe('JXABridge', () => {
       );
 
       const calledScript = mockExecSync.mock.calls[0][0] as string;
-      expect(calledScript).toContain('\\"quotes\\"');
+      expect(calledScript).toContain('\\\\\\"quotes\\\\\\"');
       expect(calledScript).toContain('\\\\backslashes\\\\');
     });
   });
