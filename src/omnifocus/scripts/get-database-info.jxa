@@ -11,11 +11,154 @@
     
     const doc = app.defaultDocument;
     
+    // Get basic database info
     const databaseInfo = {
       name: doc.name() || 'OmniFocus Database',
       path: doc.file() ? doc.file().toString() : 'Unknown',
-      isDefault: true
+      isDefault: true,
+      statistics: {
+        tasks: {
+          total: 0,
+          available: 0,
+          completed: 0,
+          dropped: 0,
+          blocked: 0,
+          flagged: 0
+        },
+        projects: {
+          total: 0,
+          active: 0,
+          onHold: 0,
+          completed: 0,
+          dropped: 0,
+          flagged: 0
+        },
+        tags: {
+          total: 0
+        },
+        folders: {
+          total: 0
+        }
+      },
+      lastUpdated: new Date().toISOString()
     };
+    
+    // Count tasks with error handling
+    try {
+      const allTasks = doc.flattenedTasks();
+      databaseInfo.statistics.tasks.total = allTasks.length;
+      
+      let availableCount = 0, completedCount = 0, droppedCount = 0, blockedCount = 0, flaggedCount = 0;
+      
+      for (let i = 0; i < allTasks.length; i++) {
+        try {
+          const task = allTasks[i];
+          
+          // Check completion status
+          try {
+            if (task.completed()) {
+              completedCount++;
+            } else if (task.dropped()) {
+              droppedCount++;
+            } else if (task.blocked()) {
+              blockedCount++;
+            } else {
+              availableCount++;
+            }
+          } catch (e) {
+            // If status check fails, count as available
+            availableCount++;
+          }
+          
+          // Check flagged status
+          try {
+            if (task.flagged()) {
+              flaggedCount++;
+            }
+          } catch (e) {
+            // Ignore flagged check failures
+          }
+        } catch (e) {
+          // Skip tasks that can't be accessed
+          continue;
+        }
+      }
+      
+      databaseInfo.statistics.tasks.available = availableCount;
+      databaseInfo.statistics.tasks.completed = completedCount;
+      databaseInfo.statistics.tasks.dropped = droppedCount;
+      databaseInfo.statistics.tasks.blocked = blockedCount;
+      databaseInfo.statistics.tasks.flagged = flaggedCount;
+    } catch (e) {
+      // If task counting fails, leave at 0
+    }
+    
+    // Count projects with error handling
+    try {
+      const allProjects = doc.flattenedProjects();
+      databaseInfo.statistics.projects.total = allProjects.length;
+      
+      let activeCount = 0, onHoldCount = 0, completedCount = 0, droppedCount = 0, flaggedCount = 0;
+      
+      for (let i = 0; i < allProjects.length; i++) {
+        try {
+          const project = allProjects[i];
+          
+          // Check project status
+          try {
+            const status = project.status();
+            if (status === 'active') {
+              activeCount++;
+            } else if (status === 'on hold') {
+              onHoldCount++;
+            } else if (status === 'completed') {
+              completedCount++;
+            } else if (status === 'dropped') {
+              droppedCount++;
+            }
+          } catch (e) {
+            // If status check fails, count as active
+            activeCount++;
+          }
+          
+          // Check flagged status
+          try {
+            if (project.flagged()) {
+              flaggedCount++;
+            }
+          } catch (e) {
+            // Ignore flagged check failures
+          }
+        } catch (e) {
+          // Skip projects that can't be accessed
+          continue;
+        }
+      }
+      
+      databaseInfo.statistics.projects.active = activeCount;
+      databaseInfo.statistics.projects.onHold = onHoldCount;
+      databaseInfo.statistics.projects.completed = completedCount;
+      databaseInfo.statistics.projects.dropped = droppedCount;
+      databaseInfo.statistics.projects.flagged = flaggedCount;
+    } catch (e) {
+      // If project counting fails, leave at 0
+    }
+    
+    // Count tags with error handling
+    try {
+      const allTags = doc.flattenedTags();
+      databaseInfo.statistics.tags.total = allTags.length;
+    } catch (e) {
+      // If tag counting fails, leave at 0
+    }
+    
+    // Count folders with error handling
+    try {
+      const allFolders = doc.flattenedFolders();
+      databaseInfo.statistics.folders.total = allFolders.length;
+    } catch (e) {
+      // If folder counting fails, leave at 0
+    }
     
     return JSON.stringify(databaseInfo);
     

@@ -129,6 +129,31 @@ export interface OmniFocusDatabase {
   name: string;
   path: string;
   isDefault: boolean;
+  statistics?: {
+    tasks: {
+      total: number;
+      available: number;
+      completed: number;
+      dropped: number;
+      blocked: number;
+      flagged: number;
+    };
+    projects: {
+      total: number;
+      active: number;
+      onHold: number;
+      completed: number;
+      dropped: number;
+      flagged: number;
+    };
+    tags: {
+      total: number;
+    };
+    folders: {
+      total: number;
+    };
+  };
+  lastUpdated?: string;
 }
 
 // Phase 2 Additional Types
