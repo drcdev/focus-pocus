@@ -1,0 +1,128 @@
+(() => {
+  'use strict';
+  
+  try {
+    const app = Application('OmniFocus');
+    app.includeStandardAdditions = true;
+    
+    if (!app.running()) {
+      throw new Error('OmniFocus is not running');
+    }
+    
+    const projectId = {{projectId}};
+    const updates = {{updates}};
+    const doc = app.defaultDocument;
+    
+    const project = doc.flattenedProjects.byId(projectId);
+    if (!project || !project.id()) {
+      throw new Error('Project not found');
+    }
+    
+    // Apply updates safely
+    if (updates.name !== undefined) {
+      project.name = updates.name;
+    }
+    if (updates.note !== undefined) {
+      project.note = updates.note;
+    }
+    if (updates.status !== undefined) {
+      project.status = updates.status;
+    }
+    if (updates.flagged !== undefined) {
+      project.flagged = updates.flagged;
+    }
+    if (updates.dueDate !== undefined) {
+      project.dueDate = updates.dueDate ? new Date(updates.dueDate) : null;
+    }
+    if (updates.deferDate !== undefined) {
+      project.deferDate = updates.deferDate ? new Date(updates.deferDate) : null;
+    }
+    if (updates.sequential !== undefined) {
+      project.sequential = updates.sequential;
+    }
+    if (updates.estimatedMinutes !== undefined) {
+      project.estimatedMinutes = updates.estimatedMinutes || null;
+    }
+    
+    // Update review interval if provided
+    if (updates.reviewInterval) {
+      try {
+        project.reviewInterval = {
+          unit: updates.reviewInterval.unit,
+          steps: updates.reviewInterval.steps
+        };
+      } catch (e) {
+        // Review interval update might fail
+      }
+    }
+    
+    // Update tags if provided
+    if (updates.tags !== undefined) {
+      try {
+        const tags = [];
+        for (const tagId of updates.tags) {
+          const tag = doc.flattenedTags.byId(tagId);
+          if (tag) tags.push(tag);
+        }
+        project.tags = tags;
+      } catch (e) {
+        // Tag update might fail
+      }
+    }
+    
+    // Build result
+    const result = {
+      id: project.id(),
+      name: project.name(),
+      note: project.note() || '',
+      status: project.status(),
+      flagged: project.flagged(),
+      dueDate: project.dueDate() ? project.dueDate().toISOString() : null,
+      deferDate: project.deferDate() ? project.deferDate().toISOString() : null,
+      completionDate: project.completionDate() ? project.completionDate().toISOString() : null,
+      sequential: project.sequential(),
+      estimatedMinutes: project.estimatedMinutes() || null,
+      folderId: null,
+      taskCount: 0,
+      availableTaskCount: 0,
+      tags: []
+    };
+    
+    // Get folder ID safely
+    try {
+      const container = project.container();
+      if (container && container.class() === 'folder') {
+        result.folderId = container.id();
+      }
+    } catch (e) {
+      // Container might not exist
+    }
+    
+    // Get task counts safely
+    try {
+      result.taskCount = project.tasks().length;
+      result.availableTaskCount = project.availableTasks().length;
+    } catch (e) {
+      // Task counts might fail
+    }
+    
+    // Get tags safely
+    try {
+      const projectTags = project.tags();
+      for (let i = 0; i < projectTags.length; i++) {
+        result.tags.push({ id: projectTags[i].id(), name: projectTags[i].name() });
+      }
+    } catch (e) {
+      // Tags might fail to load
+    }
+    
+    return JSON.stringify(result);
+    
+  } catch (error) {
+    return JSON.stringify({
+      error: true,
+      message: error.message,
+      code: 'SCRIPT_ERROR'
+    });
+  }
+})();

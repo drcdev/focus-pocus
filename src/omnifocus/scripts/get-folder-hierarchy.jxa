@@ -1,0 +1,79 @@
+(() => {
+  'use strict';
+  
+  try {
+    const app = Application('OmniFocus');
+    app.includeStandardAdditions = true;
+    
+    if (!app.running()) {
+      throw new Error('OmniFocus is not running');
+    }
+    
+    const doc = app.defaultDocument;
+    
+    function buildFolderTree(container) {
+      const folders = [];
+      
+      try {
+        const containerFolders = container.folders();
+        
+        for (let i = 0; i < containerFolders.length; i++) {
+          const folder = containerFolders[i];
+          try {
+            const folderData = {
+              id: folder.id(),
+              name: folder.name(),
+              parentFolderId: null,
+              projectCount: 0,
+              folderCount: 0,
+              children: []
+            };
+            
+            // Get parent folder safely
+            try {
+              const folderContainer = folder.container();
+              if (folderContainer && folderContainer.class() === 'folder') {
+                folderData.parentFolderId = folderContainer.id();
+              }
+            } catch (e) {
+              // Container might not exist
+            }
+            
+            // Get counts safely
+            try {
+              folderData.projectCount = folder.projects().length;
+              folderData.folderCount = folder.folders().length;
+            } catch (e) {
+              // Counts might fail
+            }
+            
+            // Get children recursively
+            try {
+              folderData.children = buildFolderTree(folder);
+            } catch (e) {
+              // Children might fail to load
+            }
+            
+            folders.push(folderData);
+          } catch (e) {
+            // Skip folder if it fails to process
+          }
+        }
+      } catch (e) {
+        // Container folders might fail to load
+      }
+      
+      return folders;
+    }
+    
+    const result = buildFolderTree(doc);
+    return JSON.stringify(result);
+    
+  } catch (error) {
+    return JSON.stringify({
+      error: true,
+      message: error.message,
+      code: 'SCRIPT_ERROR'
+    });
+  }
+})();

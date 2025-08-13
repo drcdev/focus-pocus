@@ -1,0 +1,62 @@
+(() => {
+  'use strict';
+  
+  try {
+    const app = Application('OmniFocus');
+    app.includeStandardAdditions = true;
+    
+    if (!app.running()) {
+      throw new Error('OmniFocus is not running');
+    }
+    
+    const name = {{name}};
+    const parentTagId = {{parentTagId}};
+    const doc = app.defaultDocument;
+    
+    if (!name) {
+      throw new Error('Tag name is required');
+    }
+    
+    // Create tag properties
+    const tagProps = { name: name };
+    
+    // Create the tag
+    let newTag;
+    if (parentTagId) {
+      // Create as child of parent tag
+      try {
+        const parentTag = doc.flattenedTags.byId(parentTagId);
+        if (!parentTag || !parentTag.id()) {
+          throw new Error('Parent tag not found');
+        }
+        newTag = parentTag.tags.push(app.Tag(tagProps));
+      } catch (e) {
+        return JSON.stringify({
+          error: true,
+          message: 'Parent tag not found',
+          code: 'NOT_FOUND'
+        });
+      }
+    } else {
+      // Create as root tag
+      newTag = doc.tags.push(app.Tag(tagProps));
+    }
+    
+    // Return tag data
+    const result = {
+      id: newTag.id(),
+      name: newTag.name(),
+      available: newTag.available(),
+      allowsNextAction: newTag.allowsNextAction()
+    };
+    
+    return JSON.stringify(result);
+    
+  } catch (error) {
+    return JSON.stringify({
+      error: true,
+      message: error.message,
+      code: 'SCRIPT_ERROR'
+    });
+  }
+})();

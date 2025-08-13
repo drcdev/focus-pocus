@@ -77,28 +77,36 @@
     let filteredTasks;
     
     if (options.projectId) {
-      // Search within specific project
-      const projects = doc.flattenedProjects();
-      let targetProject = null;
-      
-      for (let i = 0; i < projects.length; i++) {
-        try {
-          if (projects[i].id() === options.projectId) {
-            targetProject = projects[i];
-            break;
+      // Special handling for inbox
+      if (options.projectId === 'inbox') {
+        // Get inbox tasks directly
+        filteredTasks = Object.keys(filterObj).length > 0 
+          ? doc.inboxTasks.whose(filterObj)
+          : doc.inboxTasks();
+      } else {
+        // Search within specific project
+        const projects = doc.flattenedProjects();
+        let targetProject = null;
+        
+        for (let i = 0; i < projects.length; i++) {
+          try {
+            if (projects[i].id() === options.projectId) {
+              targetProject = projects[i];
+              break;
+            }
+          } catch (e) {
+            continue;
           }
-        } catch (e) {
-          continue;
         }
+        
+        if (!targetProject) {
+          return JSON.stringify([]);
+        }
+        
+        filteredTasks = Object.keys(filterObj).length > 0 
+          ? targetProject.flattenedTasks.whose(filterObj)
+          : targetProject.flattenedTasks();
       }
-      
-      if (!targetProject) {
-        return JSON.stringify([]);
-      }
-      
-      filteredTasks = Object.keys(filterObj).length > 0 
-        ? targetProject.flattenedTasks.whose(filterObj)
-        : targetProject.flattenedTasks();
     } else {
       // Search all tasks
       filteredTasks = Object.keys(filterObj).length > 0 

@@ -1,0 +1,69 @@
+(() => {
+  'use strict';
+  
+  try {
+    const app = Application('OmniFocus');
+    app.includeStandardAdditions = true;
+    
+    if (!app.running()) {
+      throw new Error('OmniFocus is not running');
+    }
+    
+    const name = {{name}};
+    const parentFolderId = {{parentFolderId}};
+    const doc = app.defaultDocument;
+    
+    // Determine container
+    let container = doc;
+    if (parentFolderId) {
+      try {
+        const parentFolder = doc.flattenedFolders.byId(parentFolderId);
+        if (parentFolder && parentFolder.id()) {
+          container = parentFolder;
+        }
+      } catch (e) {
+        // Parent folder not found, use document
+      }
+    }
+    
+    // Create folder
+    const folder = container.folders.push(app.Folder({
+      name: name
+    }));
+    
+    const result = {
+      id: folder.id(),
+      name: folder.name(),
+      parentFolderId: null,
+      projectCount: 0,
+      folderCount: 0
+    };
+    
+    // Get parent folder ID safely
+    try {
+      const container = folder.container();
+      if (container && container.class() === 'folder') {
+        result.parentFolderId = container.id();
+      }
+    } catch (e) {
+      // Container might not exist
+    }
+    
+    // Get counts safely
+    try {
+      result.projectCount = folder.projects().length;
+      result.folderCount = folder.folders().length;
+    } catch (e) {
+      // Counts might fail
+    }
+    
+    return JSON.stringify(result);
+    
+  } catch (error) {
+    return JSON.stringify({
+      error: true,
+      message: error.message,
+      code: 'SCRIPT_ERROR'
+    });
+  }
+})();

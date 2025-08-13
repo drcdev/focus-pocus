@@ -1,0 +1,134 @@
+(() => {
+  'use strict';
+  
+  try {
+    const app = Application('OmniFocus');
+    app.includeStandardAdditions = true;
+    
+    if (!app.running()) {
+      throw new Error('OmniFocus is not running');
+    }
+    
+    const tagId = {{tagId}};
+    const itemType = {{itemType}};
+    const doc = app.defaultDocument;
+    
+    const tag = doc.flattenedTags.byId(tagId);
+    if (!tag || !tag.id()) {
+      throw new Error('Tag not found');
+    }
+    
+    const result = { tasks: [], projects: [] };
+    
+    // Get tasks if requested
+    if (itemType === 'all' || itemType === 'tasks') {
+      try {
+        const tasks = doc.flattenedTasks.whose({ tags: { _contains: tag } });
+        for (let i = 0; i < tasks.length; i++) {
+          const task = tasks[i];
+          try {
+            const taskData = {
+              id: task.id(),
+              name: task.name(),
+              note: task.note() || '',
+              completed: task.completed(),
+              completionDate: task.completionDate() ? task.completionDate().toISOString() : null,
+              dueDate: task.dueDate() ? task.dueDate().toISOString() : null,
+              deferDate: task.deferDate() ? task.deferDate().toISOString() : null,
+              flagged: task.flagged(),
+              estimatedMinutes: task.estimatedMinutes() || null,
+              projectId: null,
+              tags: []
+            };
+            
+            // Get project ID safely
+            try {
+              const container = task.assignedContainer();
+              if (container) {
+                taskData.projectId = container.id();
+              }
+            } catch (e) {
+              // Container might not exist
+            }
+            
+            // Get tags safely
+            try {
+              const taskTags = task.tags();
+              for (let j = 0; j < taskTags.length; j++) {
+                taskData.tags.push({ id: taskTags[j].id(), name: taskTags[j].name() });
+              }
+            } catch (e) {
+              // Tags might fail to load
+            }
+            
+            result.tasks.push(taskData);
+          } catch (e) {
+            // Skip task if it fails to process
+          }
+        }
+      } catch (e) {
+        // Tasks query failed
+      }
+    }
+    
+    // Get projects if requested
+    if (itemType === 'all' || itemType === 'projects') {
+      try {
+        const projects = doc.flattenedProjects.whose({ tags: { _contains: tag } });
+        for (let i = 0; i < projects.length; i++) {
+          const project = projects[i];
+          try {
+            const projectData = {
+              id: project.id(),
+              name: project.name(),
+              note: project.note() || '',
+              status: project.status(),
+              flagged: project.flagged(),
+              dueDate: project.dueDate() ? project.dueDate().toISOString() : null,
+              deferDate: project.deferDate() ? project.deferDate().toISOString() : null,
+              completionDate: project.completionDate() ? project.completionDate().toISOString() : null,
+              sequential: project.sequential(),
+              estimatedMinutes: project.estimatedMinutes() || null,
+              taskCount: 0,
+              availableTaskCount: 0,
+              tags: []
+            };
+            
+            // Get task counts safely
+            try {
+              projectData.taskCount = project.tasks().length;
+              projectData.availableTaskCount = project.availableTasks().length;
+            } catch (e) {
+              // Task counts might fail
+            }
+            
+            // Get tags safely
+            try {
+              const projectTags = project.tags();
+              for (let j = 0; j < projectTags.length; j++) {
+                projectData.tags.push({ id: projectTags[j].id(), name: projectTags[j].name() });
+              }
+            } catch (e) {
+              // Tags might fail to load
+            }
+            
+            result.projects.push(projectData);
+          } catch (e) {
+            // Skip project if it fails to process
+          }
+        }
+      } catch (e) {
+        // Projects query failed
+      }
+    }
+    
+    return JSON.stringify(result);
+    
+  } catch (error) {
+    return JSON.stringify({
+      error: true,
+      message: error.message,
+      code: 'SCRIPT_ERROR'
+    });
+  }
+})();

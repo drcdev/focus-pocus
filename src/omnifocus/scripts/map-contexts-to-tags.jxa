@@ -1,0 +1,83 @@
+(() => {
+  'use strict';
+  
+  try {
+    const app = Application('OmniFocus');
+    app.includeStandardAdditions = true;
+    
+    if (!app.running()) {
+      throw new Error('OmniFocus is not running');
+    }
+    
+    const doc = app.defaultDocument;
+    const tags = [];
+    
+    // In OmniFocus 3+, contexts are now tags
+    // This function ensures backward compatibility by finding likely context tags
+    const contextPatterns = ['@', 'Home', 'Work', 'Office', 'Phone', 'Email', 'Errand', 'Online', 'Waiting'];
+    
+    try {
+      const allTags = doc.flattenedTags();
+      
+      for (let i = 0; i < allTags.length; i++) {
+        const tag = allTags[i];
+        try {
+          const tagName = tag.name();
+          
+          // Check if tag name matches context patterns
+          let isLikelyContext = false;
+          for (const pattern of contextPatterns) {
+            if (tagName.includes(pattern) || tagName.toLowerCase().includes(pattern.toLowerCase())) {
+              isLikelyContext = true;
+              break;
+            }
+          }
+          
+          if (isLikelyContext) {
+            const tagData = {
+              id: tag.id(),
+              name: tag.name(),
+              parentTagId: null,
+              availableTaskCount: 0,
+              remainingTaskCount: 0,
+              isContext: true
+            };
+            
+            // Get parent tag safely
+            try {
+              const container = tag.container();
+              if (container && container.class() === 'tag') {
+                tagData.parentTagId = container.id();
+              }
+            } catch (e) {
+              // Container might not exist
+            }
+            
+            // Get task counts safely
+            try {
+              tagData.availableTaskCount = tag.availableTaskCount();
+              tagData.remainingTaskCount = tag.remainingTaskCount();
+            } catch (e) {
+              // Task counts might fail
+            }
+            
+            tags.push(tagData);
+          }
+        } catch (e) {
+          // Skip tag if it fails to process
+        }
+      }
+    } catch (e) {
+      // All tags query failed
+    }
+    
+    return JSON.stringify(tags);
+    
+  } catch (error) {
+    return JSON.stringify({
+      error: true,
+      message: error.message,
+      code: 'SCRIPT_ERROR'
+    });
+  }
+})();

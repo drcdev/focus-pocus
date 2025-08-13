@@ -1,0 +1,164 @@
+(() => {
+  'use strict';
+  
+  try {
+    const app = Application('OmniFocus');
+    app.includeStandardAdditions = true;
+    
+    if (!app.running()) {
+      throw new Error('OmniFocus is not running');
+    }
+    
+    const projectId = {{projectId}};
+    const newName = {{newName}};
+    const includeTasks = {{includeTasks}};
+    const doc = app.defaultDocument;
+    
+    const sourceProject = doc.flattenedProjects.byId(projectId);
+    if (!sourceProject || !sourceProject.id()) {
+      throw new Error('Source project not found');
+    }
+    
+    // Determine container and duplicate name
+    let container = doc;
+    try {
+      const sourceContainer = sourceProject.container();
+      if (sourceContainer) {
+        container = sourceContainer;
+      }
+    } catch (e) {
+      // Use document as container
+    }
+    
+    const duplicateName = newName || (sourceProject.name() + ' (Copy)');
+    
+    // Create new project
+    const projectData = {
+      name: duplicateName,
+      status: 'active'
+    };
+    
+    // Copy properties safely
+    try { projectData.note = sourceProject.note(); } catch (e) {}
+    try { projectData.flagged = sourceProject.flagged(); } catch (e) {}
+    try { projectData.dueDate = sourceProject.dueDate(); } catch (e) {}
+    try { projectData.deferDate = sourceProject.deferDate(); } catch (e) {}
+    try { projectData.sequential = sourceProject.sequential(); } catch (e) {}
+    try { projectData.estimatedMinutes = sourceProject.estimatedMinutes(); } catch (e) {}
+    
+    const newProject = container.projects.push(app.Project(projectData));
+    
+    // Copy tags
+    try {
+      newProject.tags = sourceProject.tags();
+    } catch (e) {
+      // Tag copying might fail
+    }
+    
+    // Duplicate tasks if requested
+    if (includeTasks) {
+      try {
+        function duplicateTask(sourceTask, targetContainer) {
+          try {
+            const taskData = {
+              name: sourceTask.name()
+            };
+            
+            // Copy task properties safely
+            try { taskData.note = sourceTask.note(); } catch (e) {}
+            try { taskData.flagged = sourceTask.flagged(); } catch (e) {}
+            try { taskData.dueDate = sourceTask.dueDate(); } catch (e) {}
+            try { taskData.deferDate = sourceTask.deferDate(); } catch (e) {}
+            try { taskData.estimatedMinutes = sourceTask.estimatedMinutes(); } catch (e) {}
+            
+            const newTask = targetContainer.tasks.push(app.Task(taskData));
+            
+            // Copy tags
+            try {
+              newTask.tags = sourceTask.tags();
+            } catch (e) {
+              // Tag copying might fail
+            }
+            
+            // Recursively duplicate subtasks
+            try {
+              const subtasks = sourceTask.tasks();
+              for (let i = 0; i < subtasks.length; i++) {
+                duplicateTask(subtasks[i], newTask);
+              }
+            } catch (e) {
+              // Subtask duplication might fail
+            }
+            
+            return newTask;
+          } catch (e) {
+            // Skip task if duplication fails
+            return null;
+          }
+        }
+        
+        const sourceTasks = sourceProject.tasks();
+        for (let i = 0; i < sourceTasks.length; i++) {
+          duplicateTask(sourceTasks[i], newProject);
+        }
+      } catch (e) {
+        // Task duplication might fail
+      }
+    }
+    
+    // Build result
+    const result = {
+      id: newProject.id(),
+      name: newProject.name(),
+      note: newProject.note() || '',
+      status: newProject.status(),
+      flagged: newProject.flagged(),
+      dueDate: newProject.dueDate() ? newProject.dueDate().toISOString() : null,
+      deferDate: newProject.deferDate() ? newProject.deferDate().toISOString() : null,
+      completionDate: null,
+      sequential: newProject.sequential(),
+      estimatedMinutes: newProject.estimatedMinutes() || null,
+      folderId: null,
+      taskCount: 0,
+      availableTaskCount: 0,
+      tags: []
+    };
+    
+    // Get folder ID safely
+    try {
+      const container = newProject.container();
+      if (container && container.class() === 'folder') {
+        result.folderId = container.id();
+      }
+    } catch (e) {
+      // Container might not exist
+    }
+    
+    // Get task counts safely
+    try {
+      result.taskCount = newProject.tasks().length;
+      result.availableTaskCount = newProject.availableTasks().length;
+    } catch (e) {
+      // Task counts might fail
+    }
+    
+    // Get tags safely
+    try {
+      const projectTags = newProject.tags();
+      for (let i = 0; i < projectTags.length; i++) {
+        result.tags.push({ id: projectTags[i].id(), name: projectTags[i].name() });
+      }
+    } catch (e) {
+      // Tags might fail to load
+    }
+    
+    return JSON.stringify(result);
+    
+  } catch (error) {
+    return JSON.stringify({
+      error: true,
+      message: error.message,
+      code: 'SCRIPT_ERROR'
+    });
+  }
+})();

@@ -1,0 +1,64 @@
+(() => {
+  'use strict';
+  
+  try {
+    const app = Application('OmniFocus');
+    app.includeStandardAdditions = true;
+    
+    if (!app.running()) {
+      throw new Error('OmniFocus is not running');
+    }
+    
+    const taskId = {{taskId}};
+    if (!taskId) {
+      throw new Error('Task ID is required');
+    }
+    
+    const doc = app.defaultDocument;
+    
+    // Find the task
+    let task = null;
+    try {
+      task = doc.flattenedTasks.byId(taskId);
+      if (!task || !task.id()) {
+        throw new Error('Task not found');
+      }
+    } catch (e) {
+      return JSON.stringify({
+        error: true,
+        message: 'Task not found',
+        code: 'NOT_FOUND'
+      });
+    }
+    
+    // Get task details before archiving
+    const taskName = task.name();
+    
+    // Archive by completing the task
+    task.completed = true;
+    task.completionDate = new Date();
+    
+    // Get or create archive tag
+    let archiveTag = doc.flattenedTags.whose({ name: 'Archive' })[0];
+    if (!archiveTag) {
+      archiveTag = doc.tags.push(app.Tag({ name: 'Archive' }));
+    }
+    
+    // Add archive tag to task
+    const currentTags = task.tags();
+    currentTags.push(archiveTag);
+    task.tags = currentTags;
+    
+    return JSON.stringify({
+      success: true,
+      message: 'Task ' + taskName + ' archived successfully'
+    });
+    
+  } catch (error) {
+    return JSON.stringify({
+      error: true,
+      message: error.message,
+      code: 'SCRIPT_ERROR'
+    });
+  }
+})();

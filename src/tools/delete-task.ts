@@ -1,5 +1,6 @@
 import { OmniFocusClient } from '../omnifocus/client.js';
 import { CacheManager } from '../cache/cache-manager.js';
+import { JXABridge } from '../omnifocus/jxa-bridge.js';
 
 export class DeleteTaskTool {
   constructor(
@@ -12,28 +13,18 @@ export class DeleteTaskTool {
       return { success: false, message: 'Deletion cancelled - confirmation required' };
     }
 
-    const script = `
-      const app = Application('OmniFocus');
-      const doc = app.defaultDocument;
-      
-      const task = doc.flattenedTasks.byId('${taskId}');
-      if (!task) throw new Error('Task not found');
-      
-      const taskName = task.name();
-      const projectId = task.assignedContainer() ? task.assignedContainer().id() : null;
-      
-      // Delete the task
-      task.delete();
-      
-      return {
-        success: true,
-        message: 'Task "' + taskName + '" deleted successfully',
-        projectId: projectId
-      };
-    `;
-
     try {
-      const result = await this.client.executeJXA(script) as any;
+      // Use the JXA script file instead of inline script
+      const response = await JXABridge.execScriptFile('delete-task', { taskId });
+      
+      if (!response.success) {
+        return { 
+          success: false, 
+          message: response.error?.message || 'Failed to delete task' 
+        };
+      }
+      
+      const result = response.data as any;
       
       // Invalidate caches
       await this.cache.invalidate(`task:${taskId}:*`);
@@ -52,35 +43,18 @@ export class DeleteTaskTool {
   }
 
   async archiveTask(taskId: string): Promise<{ success: boolean; message: string }> {
-    const script = `
-      const app = Application('OmniFocus');
-      const doc = app.defaultDocument;
+    try {
+      // Use the JXA script file instead of inline script
+      const response = await JXABridge.execScriptFile('archive-task', { taskId });
       
-      const task = doc.flattenedTasks.byId('${taskId}');
-      if (!task) throw new Error('Task not found');
-      
-      const taskName = task.name();
-      
-      // Archive by completing the task (soft delete)
-      task.completed = true;
-      task.completionDate = new Date();
-      
-      // Add archive tag if it exists
-      const archiveTag = doc.flattenedTags.whose({ name: 'Archive' })[0];
-      if (archiveTag) {
-        const currentTags = task.tags();
-        currentTags.push(archiveTag);
-        task.tags = currentTags;
+      if (!response.success) {
+        return { 
+          success: false, 
+          message: response.error?.message || 'Failed to archive task' 
+        };
       }
       
-      return {
-        success: true,
-        message: 'Task "' + taskName + '" archived successfully'
-      };
-    `;
-
-    try {
-      const result = await this.client.executeJXA(script) as any;
+      const result = response.data as any;
       
       // Invalidate caches
       await this.cache.invalidate(`task:${taskId}:*`);
@@ -111,44 +85,20 @@ export class DeleteTaskTool {
       };
     }
 
-    const script = `
-      const app = Application('OmniFocus');
-      const doc = app.defaultDocument;
+    try {
+      // Use the JXA script file instead of inline script
+      const response = await JXABridge.execScriptFile('delete-tasks-bulk', { taskIds });
       
-      const taskIds = ${JSON.stringify(taskIds)};
-      const deleted = [];
-      const failed = [];
-      const affectedProjects = new Set();
-      
-      for (const taskId of taskIds) {
-        try {
-          const task = doc.flattenedTasks.byId(taskId);
-          if (!task) {
-            failed.push(taskId);
-            continue;
-          }
-          
-          // Track affected projects for cache invalidation
-          if (task.assignedContainer()) {
-            affectedProjects.add(task.assignedContainer().id());
-          }
-          
-          task.delete();
-          deleted.push(taskId);
-        } catch (e) {
-          failed.push(taskId);
-        }
+      if (!response.success) {
+        return { 
+          success: false, 
+          message: response.error?.message || 'Bulk deletion failed',
+          deleted: [],
+          failed: taskIds
+        };
       }
       
-      return {
-        deleted: deleted,
-        failed: failed,
-        affectedProjects: Array.from(affectedProjects)
-      };
-    `;
-
-    try {
-      const result = await this.client.executeJXA(script) as any;
+      const result = response.data as any;
       
       // Invalidate caches
       await this.cache.invalidate('tasks:*');
@@ -181,51 +131,20 @@ export class DeleteTaskTool {
     archived: string[]; 
     failed: string[] 
   }> {
-    const script = `
-      const app = Application('OmniFocus');
-      const doc = app.defaultDocument;
-      
-      const taskIds = ${JSON.stringify(taskIds)};
-      const archived = [];
-      const failed = [];
-      
-      // Get or create archive tag
-      let archiveTag = doc.flattenedTags.whose({ name: 'Archive' })[0];
-      if (!archiveTag) {
-        archiveTag = doc.tags.push(app.Tag({ name: 'Archive' }));
-      }
-      
-      for (const taskId of taskIds) {
-        try {
-          const task = doc.flattenedTasks.byId(taskId);
-          if (!task) {
-            failed.push(taskId);
-            continue;
-          }
-          
-          // Archive by completing the task
-          task.completed = true;
-          task.completionDate = new Date();
-          
-          // Add archive tag
-          const currentTags = task.tags();
-          currentTags.push(archiveTag);
-          task.tags = currentTags;
-          
-          archived.push(taskId);
-        } catch (e) {
-          failed.push(taskId);
-        }
-      }
-      
-      return {
-        archived: archived,
-        failed: failed
-      };
-    `;
-
     try {
-      const result = await this.client.executeJXA(script) as any;
+      // Use the JXA script file instead of inline script
+      const response = await JXABridge.execScriptFile('archive-tasks-bulk', { taskIds });
+      
+      if (!response.success) {
+        return { 
+          success: false, 
+          message: response.error?.message || 'Bulk archive failed',
+          archived: [],
+          failed: taskIds
+        };
+      }
+      
+      const result = response.data as any;
       
       // Invalidate caches
       await this.cache.invalidate('tasks:*');
@@ -263,29 +182,19 @@ export class DeleteTaskTool {
       };
     }
 
-    const script = `
-      const app = Application('OmniFocus');
-      const doc = app.defaultDocument;
+    try {
+      // Use the JXA script file instead of inline script
+      const response = await JXABridge.execScriptFile('delete-completed-in-project', { projectId });
       
-      const project = doc.flattenedProjects.byId('${projectId}');
-      if (!project) throw new Error('Project not found');
-      
-      const completedTasks = project.flattenedTasks.whose({ completed: true });
-      const count = completedTasks.length;
-      
-      // Delete all completed tasks in the project
-      for (let i = completedTasks.length - 1; i >= 0; i--) {
-        completedTasks[i].delete();
+      if (!response.success) {
+        return { 
+          success: false, 
+          message: response.error?.message || 'Failed to delete completed tasks',
+          deletedCount: 0
+        };
       }
       
-      return {
-        success: true,
-        deletedCount: count
-      };
-    `;
-
-    try {
-      const result = await this.client.executeJXA(script) as any;
+      const result = response.data as any;
       
       // Invalidate caches
       await this.cache.invalidate(`project:${projectId}:*`);

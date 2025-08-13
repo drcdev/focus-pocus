@@ -1,0 +1,60 @@
+(() => {
+  'use strict';
+  
+  try {
+    const app = Application('OmniFocus');
+    app.includeStandardAdditions = true;
+    
+    if (!app.running()) {
+      throw new Error('OmniFocus is not running');
+    }
+    
+    const taskIds = {{taskIds}};
+    const doc = app.defaultDocument;
+    
+    const deleted = [];
+    const failed = [];
+    const affectedProjects = new Set();
+    
+    for (const taskId of taskIds) {
+      try {
+        const task = doc.flattenedTasks.byId(taskId);
+        if (!task || !task.id()) {
+          failed.push(taskId);
+          continue;
+        }
+        
+        // Track affected projects for cache invalidation
+        try {
+          const container = task.assignedContainer();
+          if (container) {
+            affectedProjects.add(container.id());
+          }
+        } catch (e) {
+          // Container might not exist or be accessible
+        }
+        
+        // Delete the task
+        task.delete();
+        deleted.push(taskId);
+      } catch (e) {
+        failed.push(taskId);
+      }
+    }
+    
+    return JSON.stringify({
+      deleted: deleted,
+      failed: failed,
+      affectedProjects: Array.from(affectedProjects)
+    });
+    
+  } catch (error) {
+    return JSON.stringify({
+      error: true,
+      message: error.message,
+      code: 'SCRIPT_ERROR',
+      deleted: [],
+      failed: {{taskIds}} || []
+    });
+  }
+})();

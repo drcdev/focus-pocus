@@ -1,0 +1,43 @@
+(() => {
+  'use strict';
+  
+  try {
+    const app = Application('OmniFocus');
+    app.includeStandardAdditions = true;
+    
+    if (!app.running()) {
+      throw new Error('OmniFocus is not running');
+    }
+    
+    const itemId = {{itemId}};
+    const tagIds = {{tagIds}};
+    const itemType = {{itemType}};
+    const doc = app.defaultDocument;
+    
+    // Find the item
+    let item = null;
+    if (itemType === 'task') {
+      item = doc.flattenedTasks.byId(itemId);
+    } else {
+      item = doc.flattenedProjects.byId(itemId);
+    }
+    
+    if (!item || !item.id()) {
+      throw new Error('Item not found');
+    }
+    
+    // Remove specified tags
+    const currentTags = item.tags();
+    const filteredTags = currentTags.filter(tag => !tagIds.includes(tag.id()));
+    item.tags = filteredTags;
+    
+    return JSON.stringify({ success: true });
+    
+  } catch (error) {
+    return JSON.stringify({
+      error: true,
+      message: error.message,
+      code: 'SCRIPT_ERROR'
+    });
+  }
+})();

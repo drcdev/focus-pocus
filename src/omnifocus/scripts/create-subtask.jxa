@@ -1,0 +1,115 @@
+(() => {
+  'use strict';
+  
+  try {
+    const app = Application('OmniFocus');
+    app.includeStandardAdditions = true;
+    
+    if (!app.running()) {
+      throw new Error('OmniFocus is not running');
+    }
+    
+    const parentTaskId = {{parentTaskId}};
+    const options = {{options}};
+    const doc = app.defaultDocument;
+    
+    // Find parent task
+    let parentTask = null;
+    try {
+      parentTask = doc.flattenedTasks.byId(parentTaskId);
+      if (!parentTask || !parentTask.id()) {
+        throw new Error('Parent task not found');
+      }
+    } catch (e) {
+      return JSON.stringify({
+        error: true,
+        message: 'Parent task not found',
+        code: 'NOT_FOUND'
+      });
+    }
+    
+    // Build subtask properties
+    const taskProps = {
+      name: options.name
+    };
+    
+    if (options.note) taskProps.note = options.note;
+    if (options.flagged !== undefined) taskProps.flagged = options.flagged;
+    if (options.dueDate) taskProps.dueDate = new Date(options.dueDate);
+    if (options.deferDate) taskProps.deferDate = new Date(options.deferDate);
+    if (options.estimatedMinutes) taskProps.estimatedMinutes = options.estimatedMinutes;
+    if (options.repetitionRule) taskProps.repetitionRule = options.repetitionRule;
+    
+    // Create subtask
+    const subtask = app.Task(taskProps);
+    parentTask.tasks.push(subtask);
+    
+    // Handle tag assignment if specified
+    if (options.tags && options.tags.length > 0) {
+      try {
+        const tags = [];
+        for (const tagId of options.tags) {
+          const tag = doc.flattenedTags.byId(tagId);
+          if (tag) tags.push(tag);
+        }
+        if (tags.length > 0) {
+          subtask.tags = tags;
+        }
+      } catch (e) {
+        // Tags not found, continue without them
+      }
+    }
+    
+    // Return subtask data
+    const result = {
+      id: subtask.id(),
+      name: subtask.name(),
+      note: subtask.note() || null,
+      completed: subtask.completed(),
+      completionDate: subtask.completionDate() ? subtask.completionDate().toISOString() : null,
+      creationDate: subtask.creationDate().toISOString(),
+      modificationDate: subtask.modificationDate().toISOString(),
+      dueDate: subtask.dueDate() ? subtask.dueDate().toISOString() : null,
+      deferDate: subtask.deferDate() ? subtask.deferDate().toISOString() : null,
+      estimatedMinutes: subtask.estimatedMinutes() || null,
+      flagged: subtask.flagged(),
+      repetitionRule: subtask.repetitionRule() ? subtask.repetitionRule().toString() : null,
+      tags: [],
+      projectId: null,
+      parentTaskId: parentTaskId,
+      containingProjectInfo: null
+    };
+    
+    // Get tags
+    const taskTags = subtask.tags();
+    if (taskTags && taskTags.length > 0) {
+      for (let j = 0; j < taskTags.length; j++) {
+        result.tags.push(taskTags[j].name());
+      }
+    }
+    
+    // Get containing project
+    try {
+      const containingProject = subtask.containingProject();
+      if (containingProject) {
+        result.projectId = containingProject.id();
+        result.containingProjectInfo = {
+          id: containingProject.id(),
+          name: containingProject.name(),
+          status: containingProject.status()
+        };
+      }
+    } catch (e) {
+      // Project info might not be accessible
+    }
+    
+    return JSON.stringify(result);
+    
+  } catch (error) {
+    return JSON.stringify({
+      error: true,
+      message: error.message,
+      code: 'SCRIPT_ERROR'
+    });
+  }
+})();

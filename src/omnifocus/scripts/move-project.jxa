@@ -1,0 +1,88 @@
+(() => {
+  'use strict';
+  
+  try {
+    const app = Application('OmniFocus');
+    app.includeStandardAdditions = true;
+    
+    if (!app.running()) {
+      throw new Error('OmniFocus is not running');
+    }
+    
+    const projectId = {{projectId}};
+    const targetFolderId = {{targetFolderId}};
+    const doc = app.defaultDocument;
+    
+    const project = doc.flattenedProjects.byId(projectId);
+    if (!project || !project.id()) {
+      throw new Error('Project not found');
+    }
+    
+    // Determine target container
+    if (targetFolderId) {
+      const targetFolder = doc.flattenedFolders.byId(targetFolderId);
+      if (!targetFolder || !targetFolder.id()) {
+        throw new Error('Target folder not found');
+      }
+      project.container = targetFolder;
+    } else {
+      // Move to root
+      project.container = doc;
+    }
+    
+    // Build result
+    const result = {
+      id: project.id(),
+      name: project.name(),
+      note: project.note() || '',
+      status: project.status(),
+      flagged: project.flagged(),
+      dueDate: project.dueDate() ? project.dueDate().toISOString() : null,
+      deferDate: project.deferDate() ? project.deferDate().toISOString() : null,
+      completionDate: project.completionDate() ? project.completionDate().toISOString() : null,
+      sequential: project.sequential(),
+      estimatedMinutes: project.estimatedMinutes() || null,
+      folderId: null,
+      taskCount: 0,
+      availableTaskCount: 0,
+      tags: []
+    };
+    
+    // Get folder ID safely
+    try {
+      const container = project.container();
+      if (container && container.class() === 'folder') {
+        result.folderId = container.id();
+      }
+    } catch (e) {
+      // Container might not exist
+    }
+    
+    // Get task counts safely
+    try {
+      result.taskCount = project.tasks().length;
+      result.availableTaskCount = project.availableTasks().length;
+    } catch (e) {
+      // Task counts might fail
+    }
+    
+    // Get tags safely
+    try {
+      const projectTags = project.tags();
+      for (let i = 0; i < projectTags.length; i++) {
+        result.tags.push({ id: projectTags[i].id(), name: projectTags[i].name() });
+      }
+    } catch (e) {
+      // Tags might fail to load
+    }
+    
+    return JSON.stringify(result);
+    
+  } catch (error) {
+    return JSON.stringify({
+      error: true,
+      message: error.message,
+      code: 'SCRIPT_ERROR'
+    });
+  }
+})();

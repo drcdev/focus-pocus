@@ -884,17 +884,13 @@ export class MCPToolRegistry {
       });
     }
 
-    // Check 4: Direct JXA test (bypass execSync)
+    // Check 4: Direct JXA test (use safe method)
     try {
-      const { execSync } = await import('child_process');
-      const directResult = execSync('osascript -l JavaScript -e "Application(\'OmniFocus\').running()"', { 
-        encoding: 'utf8', 
-        timeout: 5000 
-      });
+      const directResult = await JXABridge.checkOmniFocusAvailability();
       diagnosis.checks.push({
         name: 'Direct JXA Execution',
-        status: directResult.trim() === 'true' ? 'pass' : 'fail',
-        details: `Direct JXA result: ${directResult.trim()}`
+        status: directResult ? 'pass' : 'fail',
+        details: `OmniFocus availability: ${directResult}`
       });
     } catch (error: any) {
       diagnosis.checks.push({

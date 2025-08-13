@@ -1,0 +1,93 @@
+(() => {
+  'use strict';
+  
+  try {
+    const app = Application('OmniFocus');
+    app.includeStandardAdditions = true;
+    
+    if (!app.running()) {
+      throw new Error('OmniFocus is not running');
+    }
+    
+    const options = {{options}};
+    const doc = app.defaultDocument;
+    const results = [];
+    
+    // Find project if specified
+    let project = null;
+    if (options.projectId) {
+      try {
+        project = doc.flattenedProjects.byId(options.projectId);
+        if (!project) {
+          throw new Error('Project not found');
+        }
+      } catch (e) {
+        throw new Error('Project not found');
+      }
+    }
+    
+    // Create each task
+    for (const taskData of options.tasks) {
+      try {
+        const taskProps = {
+          name: taskData.name
+        };
+        
+        if (taskData.note) taskProps.note = taskData.note;
+        if (taskData.flagged !== undefined) taskProps.flagged = taskData.flagged;
+        if (taskData.dueDate) taskProps.dueDate = new Date(taskData.dueDate);
+        if (taskData.deferDate) taskProps.deferDate = new Date(taskData.deferDate);
+        if (taskData.estimatedMinutes) taskProps.estimatedMinutes = taskData.estimatedMinutes;
+        
+        const task = app.Task(taskProps);
+        doc.inboxTasks.push(task);
+        
+        // Assign to project if specified
+        if (project) {
+          task.assignedContainer = project;
+        }
+        
+        // Handle tag assignment
+        if (taskData.tags && taskData.tags.length > 0) {
+          const tags = [];
+          for (const tagId of taskData.tags) {
+            const tag = doc.flattenedTags.byId(tagId);
+            if (tag) tags.push(tag);
+          }
+          if (tags.length > 0) {
+            task.tags = tags;
+          }
+        }
+        
+        results.push({
+          id: task.id(),
+          name: task.name(),
+          note: task.note() || null,
+          completed: task.completed(),
+          completionDate: task.completionDate() ? task.completionDate().toISOString() : null,
+          creationDate: task.creationDate().toISOString(),
+          modificationDate: task.modificationDate().toISOString(),
+          dueDate: task.dueDate() ? task.dueDate().toISOString() : null,
+          deferDate: task.deferDate() ? task.deferDate().toISOString() : null,
+          estimatedMinutes: task.estimatedMinutes() || null,
+          flagged: task.flagged(),
+          tags: task.tags().map(t => t.name()),
+          projectId: task.assignedContainer() ? task.assignedContainer().id() : null,
+          parentTaskId: null,
+          containingProjectInfo: null
+        });
+      } catch (e) {
+        // Continue with other tasks if one fails
+      }
+    }
+    
+    return JSON.stringify(results);
+    
+  } catch (error) {
+    return JSON.stringify({
+      error: true,
+      message: error.message,
+      code: 'SCRIPT_ERROR'
+    });
+  }
+})();

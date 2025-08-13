@@ -16,19 +16,15 @@
     
     const doc = app.defaultDocument;
     
-    // Try to find the task by ID
+    // Use the efficient byId method instead of iterating all tasks
     let foundTask = null;
-    const flattenedTasks = doc.flattenedTasks;
-    
-    for (let i = 0; i < flattenedTasks.length; i++) {
-      const task = flattenedTasks[i];
-      if (task.id() === taskId) {
-        foundTask = task;
-        break;
+    try {
+      foundTask = doc.flattenedTasks.byId(taskId);
+      if (!foundTask || !foundTask.id()) {
+        throw new Error('Task not found');
       }
-    }
-    
-    if (!foundTask) {
+    } catch (e) {
+      // Task not found or invalid ID
       return JSON.stringify({
         error: true,
         message: 'Task not found',

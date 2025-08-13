@@ -1,0 +1,67 @@
+(() => {
+  'use strict';
+  
+  try {
+    const app = Application('OmniFocus');
+    app.includeStandardAdditions = true;
+    
+    if (!app.running()) {
+      throw new Error('OmniFocus is not running');
+    }
+    
+    const options = {{options}};
+    const doc = app.defaultDocument;
+    
+    // Build project properties
+    const projectProps = {
+      name: options.name
+    };
+    
+    if (options.note) projectProps.note = options.note;
+    if (options.status) projectProps.status = options.status;
+    if (options.dueDate) projectProps.dueDate = new Date(options.dueDate);
+    if (options.deferDate) projectProps.deferDate = new Date(options.deferDate);
+    
+    // Create project
+    let newProject;
+    if (options.folderId) {
+      const folder = doc.flattenedFolders.byId(options.folderId);
+      if (folder) {
+        newProject = folder.projects.push(app.Project(projectProps));
+      } else {
+        newProject = doc.projects.push(app.Project(projectProps));
+      }
+    } else {
+      newProject = doc.projects.push(app.Project(projectProps));
+    }
+    
+    // Return project data
+    const result = {
+      id: newProject.id(),
+      name: newProject.name(),
+      note: newProject.note() || null,
+      status: newProject.status(),
+      creationDate: newProject.creationDate().toISOString(),
+      modificationDate: newProject.modificationDate().toISOString(),
+      dueDate: newProject.dueDate() ? newProject.dueDate().toISOString() : null,
+      deferDate: newProject.deferDate() ? newProject.deferDate().toISOString() : null,
+      estimatedMinutes: newProject.estimatedMinutes() || null,
+      flagged: newProject.flagged(),
+      tags: [],
+      folderId: null,
+      taskCount: 0,
+      completedTaskCount: 0,
+      remainingTaskCount: 0,
+      nextTaskId: null
+    };
+    
+    return JSON.stringify(result);
+    
+  } catch (error) {
+    return JSON.stringify({
+      error: true,
+      message: error.message,
+      code: 'SCRIPT_ERROR'
+    });
+  }
+})();
