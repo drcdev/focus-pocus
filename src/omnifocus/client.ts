@@ -1,5 +1,6 @@
-import { JXABridge, JXAResponse } from './jxa-bridge.js';
-import { Task, Project, Tag, Folder, Perspective, SearchOptions, OmniFocusDatabase } from './types.js';
+import { JXABridge, JXAResponse } from './jxa-bridge';
+import { Task, Project, Tag, Folder, Perspective, SearchOptions, OmniFocusDatabase } from './types';
+import { getCacheManager, CacheManager } from '../cache/cache-manager';
 
 export interface ConnectionStatus {
   connected: boolean;
@@ -15,6 +16,7 @@ export class OmniFocusClient {
   private readonly maxRetries = 3;
   private readonly connectionCheckInterval = 30000; // 30 seconds
   private connectionCheckTimer?: NodeJS.Timeout;
+  private cacheManager: CacheManager;
 
   private constructor() {
     this.connectionStatus = {
@@ -23,6 +25,12 @@ export class OmniFocusClient {
       permissionsGranted: false,
       lastChecked: new Date()
     };
+    
+    this.cacheManager = getCacheManager({
+      maxSize: 500,
+      defaultTTL: 2 * 60 * 1000, // 2 minutes for OmniFocus data
+      cleanupInterval: 30 * 1000 // 30 seconds
+    });
     
     this.startConnectionMonitoring();
   }
@@ -103,98 +111,116 @@ export class OmniFocusClient {
   }
 
   async getAllTasks(): Promise<Task[]> {
-    return this.withRetry(async () => {
-      const result = await JXABridge.execScriptFile<Task[]>('get-all-tasks');
-      if (!result.success) {
-        throw new Error(result.error?.originalMessage || 'Failed to retrieve tasks');
-      }
-      return result.data || [];
+    return this.withCache('getAllTasks', {}, async () => {
+      return this.withRetry(async () => {
+        const result = await JXABridge.execScriptFile<Task[]>('get-all-tasks');
+        if (!result.success) {
+          throw new Error(result.error?.originalMessage || 'Failed to retrieve tasks');
+        }
+        return result.data || [];
+      });
     });
   }
 
   async getTaskById(taskId: string): Promise<Task | null> {
-    return this.withRetry(async () => {
-      const result = await JXABridge.execScriptFile<Task>('get-task-by-id', { taskId });
-      if (!result.success) {
-        if (result.error?.code === 'NOT_FOUND') {
-          return null;
+    return this.withCache('getTaskById', { taskId }, async () => {
+      return this.withRetry(async () => {
+        const result = await JXABridge.execScriptFile<Task>('get-task-by-id', { taskId });
+        if (!result.success) {
+          if (result.error?.code === 'NOT_FOUND') {
+            return null;
+          }
+          throw new Error(result.error?.originalMessage || 'Failed to retrieve task');
         }
-        throw new Error(result.error?.originalMessage || 'Failed to retrieve task');
-      }
-      return result.data || null;
+        return result.data || null;
+      });
     });
   }
 
   async searchTasks(options: SearchOptions): Promise<Task[]> {
-    return this.withRetry(async () => {
-      const result = await JXABridge.execScriptFile<Task[]>('search-tasks', options);
-      if (!result.success) {
-        throw new Error(result.error?.originalMessage || 'Failed to search tasks');
-      }
-      return result.data || [];
+    return this.withCache('searchTasks', options, async () => {
+      return this.withRetry(async () => {
+        const result = await JXABridge.execScriptFile<Task[]>('search-tasks', options);
+        if (!result.success) {
+          throw new Error(result.error?.originalMessage || 'Failed to search tasks');
+        }
+        return result.data || [];
+      });
     });
   }
 
   async getAllProjects(): Promise<Project[]> {
-    return this.withRetry(async () => {
-      const result = await JXABridge.execScriptFile<Project[]>('get-projects');
-      if (!result.success) {
-        throw new Error(result.error?.originalMessage || 'Failed to retrieve projects');
-      }
-      return result.data || [];
+    return this.withCache('getAllProjects', {}, async () => {
+      return this.withRetry(async () => {
+        const result = await JXABridge.execScriptFile<Project[]>('get-projects');
+        if (!result.success) {
+          throw new Error(result.error?.originalMessage || 'Failed to retrieve projects');
+        }
+        return result.data || [];
+      });
     });
   }
 
   async getProjectById(projectId: string): Promise<Project | null> {
-    return this.withRetry(async () => {
-      const result = await JXABridge.execScriptFile<Project>('get-project-by-id', { projectId });
-      if (!result.success) {
-        if (result.error?.code === 'NOT_FOUND') {
-          return null;
+    return this.withCache('getProjectById', { projectId }, async () => {
+      return this.withRetry(async () => {
+        const result = await JXABridge.execScriptFile<Project>('get-project-by-id', { projectId });
+        if (!result.success) {
+          if (result.error?.code === 'NOT_FOUND') {
+            return null;
+          }
+          throw new Error(result.error?.originalMessage || 'Failed to retrieve project');
         }
-        throw new Error(result.error?.originalMessage || 'Failed to retrieve project');
-      }
-      return result.data || null;
+        return result.data || null;
+      });
     });
   }
 
   async getAllTags(): Promise<Tag[]> {
-    return this.withRetry(async () => {
-      const result = await JXABridge.execScriptFile<Tag[]>('get-tags');
-      if (!result.success) {
-        throw new Error(result.error?.originalMessage || 'Failed to retrieve tags');
-      }
-      return result.data || [];
+    return this.withCache('getAllTags', {}, async () => {
+      return this.withRetry(async () => {
+        const result = await JXABridge.execScriptFile<Tag[]>('get-tags');
+        if (!result.success) {
+          throw new Error(result.error?.originalMessage || 'Failed to retrieve tags');
+        }
+        return result.data || [];
+      });
     });
   }
 
   async getAllFolders(): Promise<Folder[]> {
-    return this.withRetry(async () => {
-      const result = await JXABridge.execScriptFile<Folder[]>('get-folders');
-      if (!result.success) {
-        throw new Error(result.error?.originalMessage || 'Failed to retrieve folders');
-      }
-      return result.data || [];
+    return this.withCache('getAllFolders', {}, async () => {
+      return this.withRetry(async () => {
+        const result = await JXABridge.execScriptFile<Folder[]>('get-folders');
+        if (!result.success) {
+          throw new Error(result.error?.originalMessage || 'Failed to retrieve folders');
+        }
+        return result.data || [];
+      });
     });
   }
 
   async getPerspectives(): Promise<Perspective[]> {
-    return this.withRetry(async () => {
-      const result = await JXABridge.execScriptFile<Perspective[]>('get-perspectives');
-      if (!result.success) {
-        throw new Error(result.error?.originalMessage || 'Failed to retrieve perspectives');
-      }
-      return result.data || [];
+    return this.withCache('getPerspectives', {}, async () => {
+      return this.withRetry(async () => {
+        const result = await JXABridge.execScriptFile<Perspective[]>('get-perspectives');
+        if (!result.success) {
+          throw new Error(result.error?.originalMessage || 'Failed to retrieve perspectives');
+        }
+        return result.data || [];
+      });
     });
   }
 
   async getDatabaseInfo(): Promise<OmniFocusDatabase> {
-    return this.withRetry(async () => {
-      const result = await JXABridge.execScriptFile<OmniFocusDatabase>('get-database-info');
-      if (!result.success) {
-        throw new Error(result.error?.originalMessage || 'Failed to retrieve database info');
-      }
-      return result.data!;
+    return this.withCache('getDatabaseInfo', {}, async () => {
+      return this.withRetry(async () => {
+        const result = await JXABridge.execScriptFile<OmniFocusDatabase>('get-database-info');
+        if (!result.success) {
+          throw new Error(result.error?.originalMessage || 'Failed to retrieve database info');
+        }
+        return result.data!;
+      });
     });
   }
 
@@ -235,6 +261,41 @@ export class OmniFocusClient {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
+  private async withCache<T>(operation: string, params: any, fetchFn: () => Promise<T>): Promise<T> {
+    const cacheKey = this.cacheManager.generateKey(operation, params);
+    
+    // Try to get from cache first
+    const cached = this.cacheManager.get<T>(cacheKey);
+    if (cached !== null) {
+      return cached;
+    }
+    
+    // Cache miss - fetch data
+    const result = await fetchFn();
+    
+    // Store in cache
+    this.cacheManager.set(cacheKey, result);
+    
+    return result;
+  }
+
+  // Cache management methods
+  public clearCache(): void {
+    this.cacheManager.clear();
+  }
+
+  public invalidateTaskCache(): void {
+    this.cacheManager.invalidateTaskCache();
+  }
+
+  public invalidateProjectCache(): void {
+    this.cacheManager.invalidateProjectCache();
+  }
+
+  public getCacheStats() {
+    return this.cacheManager.getStats();
+  }
+
   private startConnectionMonitoring(): void {
     this.connectionCheckTimer = setInterval(async () => {
       await this.performHealthCheck();
@@ -250,6 +311,7 @@ export class OmniFocusClient {
 
   public destroy(): void {
     this.stopConnectionMonitoring();
+    this.cacheManager.destroy();
     OmniFocusClient.instance = null;
   }
 }

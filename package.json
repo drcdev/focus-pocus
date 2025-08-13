@@ -9,7 +9,12 @@
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit"
   },
-  "keywords": ["omnifocus", "mcp", "productivity", "task-management"],
+  "keywords": [
+    "omnifocus",
+    "mcp",
+    "productivity",
+    "task-management"
+  ],
   "author": "",
   "license": "ISC",
   "description": "OmniFocus MCP server for AI assistant integration",
@@ -20,5 +25,8 @@
     "jest": "^30.0.5",
     "tsx": "^4.20.4",
     "typescript": "^5.9.2"
+  },
+  "devDependencies": {
+    "ts-jest": "^29.4.1"
   }
 }

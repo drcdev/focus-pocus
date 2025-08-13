@@ -76,7 +76,7 @@ Build a Model Context Protocol (MCP) server for OmniFocus 4 that enables AI assi
 
 ### 1.3 Core Features Implementation
 
-- [ ] Implement basic read operations
+- [x] Implement basic read operations
 
   - `getTasks()`: Retrieve all tasks with basic properties
   - `getProjects()`: List all projects and folders
@@ -93,7 +93,7 @@ Build a Model Context Protocol (MCP) server for OmniFocus 4 that enables AI assi
   - Perspective interface (name, type, identifier)
   ```
 
-- [ ] Build caching layer foundation
+- [x] Build caching layer foundation
   ```typescript
   // src/cache/cache-manager.ts
   - Implement in-memory cache with TTL
@@ -103,13 +103,13 @@ Build a Model Context Protocol (MCP) server for OmniFocus 4 that enables AI assi
 
 ### 1.4 Testing & Documentation
 
-- [ ] Write unit tests for JXA bridge
+- [x] Write unit tests for JXA bridge
 
   - Test script execution
   - Test error handling
   - Test response parsing
 
-- [ ] Create initial documentation
+- [x] Create initial documentation
   - Installation guide
   - Permission setup for macOS automation
   - Basic usage examples
