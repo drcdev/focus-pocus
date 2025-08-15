@@ -229,12 +229,37 @@ The MCP server connects to Claude Desktop via stdio transport:
    - Direct assignment to `item.tags` causes "Can't convert types" errors in OmniFocus 4
    - These methods work reliably with the updated OmniFocus 4 JXA API
    - **Source**: Working API discovered through research of Omni Group forums (discourse.omnigroup.com/t/request-automate-adding-and-removing-tags-to-multiple-tasks-solved/44180) and Omni Automation documentation (omni-automation.com/omnifocus/task.html, omni-automation.com/jxa-applescript.html)
+9. **✅ STANDARDIZED SAFEGET FUNCTION** - All JXA scripts must use the standardized safeGet utility:
+   - **Purpose**: Handles OmniFocus 4 API property access inconsistencies reliably
+   - **Implementation**: Dual-approach pattern tries function call first, then direct property access
+   - **Usage**: `safeGet(obj, 'propertyName', defaultValue)` instead of direct `obj.propertyName()` or `obj.propertyName`
+   - **Standard Implementation**:
+     ```javascript
+     function safeGet(obj, prop, defaultValue = null) {
+       try {
+         // OmniFocus 4 requires function call syntax for property access
+         const value = obj[prop]();
+         return value !== undefined ? value : defaultValue;
+       } catch (e) {
+         // Fallback to direct property access for compatibility
+         try {
+           const directValue = obj[prop];
+           return directValue !== undefined ? directValue : defaultValue;
+         } catch (e2) {
+           return defaultValue;
+         }
+       }
+     }
+     ```
+   - **Benefits**: Maximum compatibility, graceful error handling, consistent property access pattern
+   - **Status**: ✅ **Standardized across all 39 JXA scripts** (completed 2025-08-14)
 
 ### Utility Function Guidelines
 
 **Active Functions** (currently used in codebase):
 
 - `generateId()` - Primary UUID generation function
+- `safeGet()` - Standardized property access for OmniFocus JXA objects (all 39 JXA scripts)
 - All DateHandler functions - Natural language date parsing
 - All SchedulingUtilities functions - Task scheduling optimization
 

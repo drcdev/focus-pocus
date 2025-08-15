@@ -1,6 +1,23 @@
 (() => {
   'use strict';
   
+  // Utility function for safe property access - eliminates redundant try-catch blocks
+  function safeGet(obj, prop, defaultValue = null) {
+    try {
+      // OmniFocus 4 requires function call syntax for property access
+      const value = obj[prop]();
+      return value !== undefined ? value : defaultValue;
+    } catch (e) {
+      // Fallback to direct property access for compatibility
+      try {
+        const directValue = obj[prop];
+        return directValue !== undefined ? directValue : defaultValue;
+      } catch (e2) {
+        return defaultValue;
+      }
+    }
+  }
+  
   try {
     const itemIds = {{itemIds}};
     const tagIds = {{tagIds}};
@@ -39,7 +56,7 @@
       for (let i = 0; i < allTags.length; i++) {
         const tag = allTags[i];
         try {
-          if (tag.id() === requestedTagId) {
+          if (safeGet(tag, 'id') === requestedTagId) {
             foundTag = tag;
             break;
           }
@@ -81,7 +98,7 @@
           continue;
         }
         
-        if (!item || !item.id()) {
+        if (!item || !safeGet(item, 'id')) {
           errors.push(`${itemType} with ID ${itemId} not found`);
           errorCount++;
           continue;
@@ -92,7 +109,7 @@
           try {
             app.add(tag, { to: item.tags });
           } catch (tagError) {
-            console.log(`Warning: Failed to assign tag ${tag.name()} to ${itemType} ${itemId}: ${tagError.message}`);
+            console.log(`Warning: Failed to assign tag ${safeGet(tag, 'name', 'Unknown')} to ${itemType} ${itemId}: ${tagError.message}`);
           }
         }
 
