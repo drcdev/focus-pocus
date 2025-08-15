@@ -1,7 +1,7 @@
 {
   "name": "focus-pocus",
   "version": "1.0.0",
-  "description": "Production-ready MCP server connecting Claude Desktop to OmniFocus with comprehensive task management, natural language date parsing, and intelligent automation",
+  "description": "MCP server connecting Claude Desktop to OmniFocus with comprehensive task management, natural language date parsing, and intelligent automation",
   "main": "dist/index.js",
   "bin": {
     "focus-pocus": "dist/index.js"

@@ -4,7 +4,7 @@ This guide provides detailed, step-by-step instructions for setting up Focus Poc
 
 ## Overview
 
-Focus Pocus is a production-ready MCP (Model Context Protocol) server that connects Claude Desktop to OmniFocus 4. This guide assumes you want to run it locally on your Mac for personal use.
+Focus Pocus is an MCP (Model Context Protocol) server that connects Claude Desktop to OmniFocus 4. This guide assumes you want to run it locally on your Mac for personal use.
 
 ## System Requirements
 

@@ -4,7 +4,7 @@ Connect Claude Desktop to OmniFocus with comprehensive task management, natural 
 
 ## What is Focus Pocus?
 
-Focus Pocus is a production-ready MCP (Model Context Protocol) server that enables Claude Desktop to interact with your OmniFocus tasks, projects, and workflows. Ask Claude to manage your tasks naturally: _"Create a task for tomorrow"_, _"Show me overdue items"_, or _"Schedule my remaining work optimally"_.
+Focus Pocus is an MCP (Model Context Protocol) server that enables Claude Desktop to interact with your OmniFocus tasks, projects, and workflows. Ask Claude to manage your tasks naturally: _"Create a task for tomorrow"_, _"Show me overdue items"_, or _"Schedule my remaining work optimally"_.
 
 ### Key Features
 
@@ -135,7 +135,7 @@ Focus Pocus supports 35+ operations covering all aspects of OmniFocus management
 
 ### Architecture
 
-- **TypeScript MCP Server** - 3,800+ lines of production code
+- **TypeScript MCP Server** - 3,800+ lines of code
 - **JXA Integration** - 39 JavaScript for Automation scripts
 - **Caching Layer** - High-performance with intelligent invalidation
 - **35+ MCP Tools** - Complete OmniFocus API coverage
@@ -206,14 +206,14 @@ Focus Pocus works great out of the box. For advanced users, customize via enviro
 
 ## Status & Roadmap
 
-**Current Status: ✅ Production Ready**
+**Current Status: ✅ Feature Complete**
 
 Focus Pocus has completed Phase 1-3 development with:
 
 - ✅ **35+ MCP Tools** - Complete OmniFocus workflow coverage
 - ✅ **39 JXA Scripts** - Comprehensive automation with error handling
 - ✅ **Advanced Features** - Natural language dates, smart scheduling, bulk operations
-- ✅ **Production Optimization** - Caching, pagination, graceful error recovery
+- ✅ **Performance Optimization** - Caching, pagination, graceful error recovery
 
 **Upcoming Features:**
 

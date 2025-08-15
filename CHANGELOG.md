@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2025-08-14
 
 ### Added
-- **Complete MCP Server Implementation** - Production-ready Model Context Protocol server
+- **Complete MCP Server Implementation** - Model Context Protocol server
 - **35+ MCP Tools** - Comprehensive OmniFocus workflow coverage
 - **39 JXA Scripts** - JavaScript for Automation integration with OmniFocus
 - **Natural Language Date Parsing** - Support for "tomorrow at 2pm", "next Friday", complex patterns
@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Tag Management** - Complete hierarchy support with assignment/removal
 - **Project Operations** - Full project lifecycle with folder organization
 - **Perspective Access** - Built-in perspectives (Inbox, Projects, Forecast, Flagged, etc.)
-- **Production Caching** - High-performance layer with intelligent invalidation
+- **Performance Caching** - High-performance layer with intelligent invalidation
 - **Comprehensive Error Handling** - Graceful degradation for OmniFocus 4 API limitations
 - **Connection Diagnostics** - Automated system health checks
 - **Automated Installation** - One-command setup with validation
@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Detailed Documentation** - Comprehensive guides for installation and troubleshooting
 
 ### Technical Features
-- **TypeScript Architecture** - 3,822 lines of production code with strict typing
+- **TypeScript Architecture** - 3,822 lines of code with strict typing
 - **Performance Optimization** - 45-second timeouts, pagination, retry logic
 - **Cache Management** - TTL-based caching with intelligent invalidation
 - **Error Recovery** - Standardized safeGet() function across all JXA scripts
