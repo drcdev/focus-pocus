@@ -1,35 +1,57 @@
 {
   "name": "focus-pocus",
   "version": "1.0.0",
+  "description": "Production-ready MCP server connecting Claude Desktop to OmniFocus with comprehensive task management, natural language date parsing, and intelligent automation",
   "main": "dist/index.js",
+  "bin": {
+    "focus-pocus": "dist/index.js"
+  },
   "scripts": {
     "build": "tsc && npm run copy-scripts",
     "copy-scripts": "mkdir -p dist/omnifocus/scripts && cp src/omnifocus/scripts/*.jxa dist/omnifocus/scripts/",
     "dev": "tsx src/index.ts",
     "test": "jest",
     "clean": "rm -rf dist",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "install:claude": "./install.sh",
+    "validate": "./validate-config.sh"
   },
   "keywords": [
     "omnifocus",
     "mcp",
+    "model-context-protocol",
+    "claude-desktop",
     "productivity",
-    "task-management"
+    "task-management",
+    "automation",
+    "macos",
+    "jxa"
   ],
-  "author": "",
+  "author": "Focus Pocus Contributors",
   "license": "ISC",
-  "description": "OmniFocus MCP server for AI assistant integration",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/focus-pocus.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/focus-pocus/issues"
+  },
+  "homepage": "https://github.com/your-username/focus-pocus#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "os": ["darwin"],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.2",
-    "@types/jest": "^30.0.0",
-    "@types/node": "^24.2.1",
     "date-fns": "^3.6.0",
-    "date-fns-tz": "^3.1.3",
-    "jest": "^30.0.5",
-    "tsx": "^4.20.4",
-    "typescript": "^5.9.2"
+    "date-fns-tz": "^3.1.3"
   },
   "devDependencies": {
-    "ts-jest": "^29.4.1"
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.2.1",
+    "jest": "^30.0.5",
+    "ts-jest": "^29.4.1",
+    "tsx": "^4.20.4",
+    "typescript": "^5.9.2"
   }
 }

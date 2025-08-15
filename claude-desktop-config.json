@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "focus-pocus": {
+      "command": "node",
+      "args": ["/ABSOLUTE/PATH/TO/focus-pocus/dist/index.js"],
+      "env": {
+        "LOG_LEVEL": "info"
+      }
+    }
+  }
+}

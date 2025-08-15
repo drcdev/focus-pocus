@@ -1,321 +1,227 @@
 # Focus Pocus - OmniFocus MCP Server
 
-A production-ready Model Context Protocol (MCP) server that enables AI assistants to interact with OmniFocus 4. Features comprehensive task management, intelligent project scaffolding, and advanced automation capabilities.
+Connect Claude Desktop to OmniFocus with comprehensive task management, natural language date parsing, and intelligent automation.
 
-## Features
+## What is Focus Pocus?
 
-### Core Functionality
-- **Complete Task Management**: Full CRUD operations for tasks, projects, folders, and tags
-- **Advanced Search**: Native task search with filtering, pagination, and status-based queries
-- **Bulk Operations**: Batch create, update, delete with transaction support
-- **Project Organization**: Comprehensive project and folder hierarchy management
-- **Tag System**: Full tag lifecycle with assignment, removal, and hierarchy support
+Focus Pocus is a production-ready MCP (Model Context Protocol) server that enables Claude Desktop to interact with your OmniFocus tasks, projects, and workflows. Ask Claude to manage your tasks naturally: *"Create a task for tomorrow"*, *"Show me overdue items"*, or *"Schedule my remaining work optimally"*.
 
-### Performance & Integration
-- **High Performance**: Intelligent caching layer with automatic invalidation
-- **Native macOS Integration**: Optimized JavaScript for Automation (JXA) bridge
-- **OmniFocus 4 Optimized**: Handles API limitations with graceful degradation
-- **Pagination Support**: Efficient handling of large datasets
-- **Connection Diagnostics**: Automated permission and connectivity testing
+### Key Features
 
-### Advanced Features
-- **Natural Language Processing**: Smart date parsing and task scheduling
-- **Perspective Access**: Built-in perspectives with custom perspective detection
-- **Error Recovery**: Robust error handling with intelligent fallbacks
-- **Production Ready**: Comprehensive logging, monitoring, and performance optimization
+✅ **Complete Task Management** - Create, update, delete tasks and projects  
+✅ **Natural Language Dates** - "tomorrow at 2pm", "next Friday", "in 3 days"  
+✅ **Bulk Operations** - Process multiple tasks efficiently  
+✅ **Smart Scheduling** - Optimal task distribution and workload balancing  
+✅ **Tag & Project Organization** - Full hierarchy support  
+✅ **Built-in Perspectives** - Access Inbox, Forecast, Flagged, and more  
 
 ## Requirements
 
-- **macOS 10.15+** (required for OmniFocus 4 and JXA)
-- **OmniFocus 4** (Standard or Pro)
+- **macOS 10.15+** 
+- **OmniFocus** (any version)
 - **Node.js 18+**
-- **Claude Desktop** (for MCP integration)
+- **Claude Desktop**
 
 ## Installation
 
-### 1. Install Dependencies
+### Automated Installation (Recommended)
 
 ```bash
+# 1. Clone and install
 git clone https://github.com/your-username/focus-pocus.git
 cd focus-pocus
-npm install
+
+# 2. Run the installation script
+./install.sh
 ```
 
-> **Note**: Replace `your-username` with the actual repository owner.
+The script will:
+- ✅ Check all prerequisites
+- ✅ Install dependencies and build the project  
+- ✅ Set up macOS automation permissions
+- ✅ Configure Claude Desktop automatically
+- ✅ Test the complete installation
 
-### 2. Build the Project
+### Manual Installation
+
+If you prefer manual setup:
 
 ```bash
-npm run build
-```
+# 1. Install and build
+git clone https://github.com/your-username/focus-pocus.git
+cd focus-pocus
+npm install && npm run build
 
-### 3. Configure macOS Automation Permissions
-
-The MCP server requires automation permissions to interact with OmniFocus:
-
-1. **Open System Preferences** → **Security & Privacy** → **Privacy**
-2. **Select "Automation"** from the left sidebar
-3. **Find your terminal app** (Terminal.app, iTerm2, etc.) in the list
-4. **Check the box next to "OmniFocus 4"**
-
-If you don't see these options:
-1. Try running the server first - macOS will prompt for permissions
-2. Click "OK" when prompted to allow automation access
-
-### 4. Configure Claude Desktop
-
-Add the MCP server to your Claude Desktop configuration:
-
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-
-```json
+# 2. Configure Claude Desktop
+# Edit: ~/Library/Application Support/Claude/claude_desktop_config.json
 {
   "mcpServers": {
-    "omnifocus": {
+    "focus-pocus": {
       "command": "node",
-      "args": ["path/to/focus-pocus/dist/index.js"],
+      "args": ["/ABSOLUTE/PATH/TO/focus-pocus/dist/index.js"],
       "env": {}
     }
   }
 }
+
+# 3. Grant automation permissions when prompted
+# 4. Restart Claude Desktop
 ```
 
-Replace `path/to/focus-pocus` with the actual path to your installation.
+> **Note**: Replace `your-username` with the actual repository owner and `/ABSOLUTE/PATH/TO/focus-pocus` with your installation path.
 
 ## Quick Start
 
-1. **Ensure OmniFocus 4 is running**
-2. **Start Claude Desktop**
-3. **Test the connection**:
+After installation:
+
+1. **Launch OmniFocus** and **Claude Desktop**
+2. **Test the connection** by asking Claude:
 
 ```
 Can you show me my current tasks in OmniFocus?
 ```
 
-### Connection Verification
-
-If you encounter issues, use the diagnostic tool:
+3. **Try these example commands**:
 
 ```
-Can you run a diagnostic check on my OmniFocus connection?
+# Basic operations
+Create a task "Review project proposal" due tomorrow
+Show me all tasks in my "Work" project
+Mark the task "Buy groceries" as complete
+
+# Natural language dates  
+Create a task "Team meeting" for next Monday at 10am
+Schedule "Finish report" for Friday afternoon
+
+# Advanced features
+Show me my overdue tasks
+Schedule my remaining tasks optimally this week
+What's in my Forecast for today?
 ```
 
-This will verify:
-- OmniFocus 4 is running and accessible
-- Automation permissions are properly configured
-- JXA bridge is functioning correctly
-- Database connectivity is stable
+### Troubleshooting
 
-## Usage Examples
+**Connection issues?** Ask Claude: `Can you diagnose my OmniFocus connection?`
 
-### Basic Task Management
+**Need help?** Check the detailed troubleshooting guide in [docs/local-deployment.md](docs/local-deployment.md)
 
-```
-# Get all tasks with pagination
-Show me my first 25 tasks
+## Available Operations
 
-# Search for specific tasks with filters
-Find all incomplete tasks related to "project planning"
+Focus Pocus supports 35+ operations covering all aspects of OmniFocus management:
 
-# Get tasks in a specific project
-Show me all tasks in my "Website Redesign" project
+### Tasks & Projects
+- **Task Management**: Create, update, complete, delete, move tasks
+- **Project Operations**: Create projects, manage status, organize in folders  
+- **Bulk Operations**: Create/update/delete multiple items efficiently
+- **Search & Filtering**: Find tasks by content, tags, dates, completion status
 
-# Create and manage tasks
-Create a new task "Review wireframes" in my "Design" project
-```
+### Organization & Planning
+- **Tag Management**: Create, assign, remove tags with hierarchy support
+- **Date Handling**: Natural language parsing ("tomorrow", "next Friday at 2pm")
+- **Perspective Access**: View Inbox, Forecast, Flagged, Projects, and more
+- **Smart Scheduling**: Optimal task distribution with workload balancing
 
-### Advanced Operations
+### Advanced Features
+- **Progressive Deadlines**: Intelligent deadline generation for projects
+- **Batch Processing**: Handle multiple operations atomically  
+- **Connection Diagnostics**: Comprehensive system health checks
+- **Performance Optimization**: Caching and pagination for large databases
 
-```
-# Bulk operations
-Create multiple tasks for my project setup phase
+## Technical Details
 
-# Tag management
-Show me all tasks tagged with "urgent" and "client-work"
+### Architecture
+- **TypeScript MCP Server** - 3,800+ lines of production code
+- **JXA Integration** - 39 JavaScript for Automation scripts  
+- **Caching Layer** - High-performance with intelligent invalidation
+- **35+ MCP Tools** - Complete OmniFocus API coverage
 
-# Project organization
-Move the "Mobile App" project to the "Development" folder
-
-# Perspective access
-Show me my Forecast perspective for this week
-```
-
-### Productivity & Analytics
-
-```
-# Task scheduling
-Schedule my remaining tasks optimally for this week
-
-# Natural language dates
-Create a task due "next Friday afternoon"
-
-# Bulk updates
-Mark all completed tasks in "Q3 Planning" as archived
-```
-
-## Architecture
-
-```
-focus-pocus/
-├── src/
-│   ├── index.ts              # MCP server entry point
-│   ├── omnifocus/            # OmniFocus integration layer
-│   │   ├── jxa-bridge.ts     # JavaScript for Automation bridge
-│   │   ├── client.ts         # OmniFocus application wrapper
-│   │   ├── scripts/          # 25+ JXA automation scripts
-│   │   └── types.ts          # TypeScript interfaces
-│   ├── tools/                # 35+ MCP tool implementations
-│   │   ├── index.ts          # Tool registry and schemas
-│   │   ├── create-task.ts    # Task creation tools
-│   │   ├── update-task.ts    # Task modification tools
-│   │   ├── delete-task.ts    # Task deletion and archival
-│   │   ├── project-operations.ts # Project management
-│   │   └── tag-operations.ts # Tag management
-│   ├── cache/                # High-performance caching layer
-│   │   └── cache-manager.ts  # Intelligent cache management
-│   └── utils/                # Advanced utilities
-│       ├── date-handler.ts   # Natural language date parsing
-│       ├── scheduling.ts     # Task scheduling optimization
-│       └── id-generator.ts   # Unique ID generation
-├── tests/                    # Comprehensive test suite
-├── dist/                     # Compiled output (JS + JXA)
-├── docs/                     # Documentation and guides
-└── workplan.md              # 7-phase development plan
-```
-
-## Development
-
-### Available Commands
+### Development
 
 ```bash
-# Build and deployment
-npm run build         # Production build (TypeScript + JXA scripts)
-npm run typecheck     # TypeScript type checking
-npm run copy-scripts  # Copy JXA scripts to dist folder
-
-# Testing and validation
+# Essential commands
+npm run build         # Build for production  
+npm run typecheck     # Type checking
 npm test             # Run test suite
-npm run test:watch   # Run tests in watch mode
-
-# Server operations
-node dist/index.js   # Run the MCP server
+node dist/index.js   # Run MCP server manually
 ```
 
-### Development Workflow
-
-1. **Make changes** to TypeScript source files
-2. **Run type checking**: `npm run typecheck`
-3. **Run tests**: `npm test`
-4. **Build for production**: `npm run build`
-5. **Test with Claude Desktop**: Restart Claude Desktop to reload the server
-
-### JXA Script Development
-
-1. **Edit scripts** in `src/omnifocus/scripts/`
-2. **Test in Script Editor** (macOS)
-3. **Copy to dist**: `npm run copy-scripts`
-4. **Test integration**: Run MCP server and test via Claude
+For detailed development setup, see [docs/local-deployment.md](docs/local-deployment.md)
 
 ## Troubleshooting
 
-### "Not Authorized" Errors
+### Quick Fixes
 
-- **Cause**: macOS automation permissions not granted
-- **Solution**: Follow the [automation permissions setup](#3-configure-macos-automation-permissions)
+**"Command not found: node"**  
+→ Install Node.js 18+ from [nodejs.org](https://nodejs.org) or `brew install node`
 
-### "Application Not Running" Errors  
+**"Not Authorized" or "Automation Error"**  
+→ Grant automation permissions: **System Preferences** → **Security & Privacy** → **Privacy** → **Automation** → Enable your terminal app for OmniFocus
 
-- **Cause**: OmniFocus 4 is not currently running
-- **Solution**: Launch OmniFocus 4 before using the MCP server
+**"Cannot find module" errors**  
+→ Run `npm install && npm run build`
 
-### "Permission Denied" Errors
+**"MCP server not found"**  
+→ Check absolute path in Claude Desktop config: `cd focus-pocus && pwd`
 
-- **Cause**: Terminal/iTerm doesn't have automation permissions
-- **Solution**: Grant automation permissions in System Preferences → Security & Privacy
+**Connection timeouts**  
+→ Large databases are slower on first run - subsequent requests use cache
 
-### Connection Timeouts
+### Detailed Help
 
-- **Cause**: Large OmniFocus database causing slow queries
-- **Solution**: The built-in cache will improve performance after initial queries
+For comprehensive troubleshooting including step-by-step solutions, permission setup, and advanced debugging, see [docs/local-deployment.md](docs/local-deployment.md)
 
-### Script Errors
-
-- **Cause**: OmniFocus database corruption or version mismatch  
-- **Solution**: Try restarting OmniFocus, or check for OmniFocus updates
+**Still having issues?** Ask Claude: `Can you diagnose my OmniFocus connection?`
 
 ## Configuration
 
-The server supports various configuration options through environment variables:
+Focus Pocus works great out of the box. For advanced users, customize via environment variables in your Claude Desktop config:
 
-```bash
-# Cache settings
-CACHE_MAX_SIZE=1000          # Maximum cache entries (default: 500)
-CACHE_TTL=300000            # Cache TTL in ms (default: 120000)
-
-# Performance settings  
-JXA_TIMEOUT=45000           # JXA script timeout (default: 45000)
-MAX_RETRIES=3               # Maximum retry attempts (default: 3)
-DEFAULT_LIMIT=25            # Default pagination limit (default: 25)
-
-# Logging
-LOG_LEVEL=info              # Log level: debug, info, warn, error
-ENABLE_CACHE_LOGGING=false  # Cache operation logging (default: false)
+```json
+{
+  "mcpServers": {
+    "focus-pocus": {
+      "command": "node",
+      "args": ["/path/to/focus-pocus/dist/index.js"],
+      "env": {
+        "LOG_LEVEL": "info",
+        "JXA_TIMEOUT": "45000",
+        "CACHE_MAX_SIZE": "500",
+        "DEFAULT_LIMIT": "25"
+      }
+    }
+  }
+}
 ```
 
-### Performance Tuning
+**Performance Tips:**
+- **Large databases (1000+ tasks)**: Increase `JXA_TIMEOUT` to `60000`
+- **Limited memory**: Reduce `CACHE_MAX_SIZE` to `100`
+- **Debugging**: Set `LOG_LEVEL` to `debug`
 
-- **Large Databases**: Increase `JXA_TIMEOUT` for databases with 1000+ tasks
-- **Memory Optimization**: Adjust `CACHE_MAX_SIZE` based on available RAM
-- **Response Time**: Lower `DEFAULT_LIMIT` for faster individual requests
-- **Debugging**: Enable `ENABLE_CACHE_LOGGING` for cache behavior analysis
+## Status & Roadmap
 
-## Contributing
+**Current Status: ✅ Production Ready**
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+Focus Pocus has completed Phase 1-3 development with:
+- ✅ **35+ MCP Tools** - Complete OmniFocus workflow coverage
+- ✅ **39 JXA Scripts** - Comprehensive automation with error handling  
+- ✅ **Advanced Features** - Natural language dates, smart scheduling, bulk operations
+- ✅ **Production Optimization** - Caching, pagination, graceful error recovery
 
-## Roadmap
+**Upcoming Features:**
+- 🚀 **Project Templates** - Intelligent project scaffolding
+- 📊 **Basic Analytics** - Task completion insights and reporting
+- 🔧 **Enhanced Performance** - Further optimization for large databases
 
-- **Phase 1**: ✅ Foundation & Infrastructure (Complete)
-- **Phase 2**: ✅ CRUD Operations & Task Management (Complete)
-- **Phase 3**: ✅ Advanced Features & Perspectives (Complete)
-- **Phase 4**: 🚀 Intelligent Project Scaffolding (In Progress)
-- **Phase 5**: 📊 Analytics & Productivity Insights (Planned)
-- **Phase 6**: ⚡ Performance & Production Optimization (Planned)
-- **Phase 7**: 📚 Documentation & Deployment (Planned)
+## Contributing & Support
 
-### Current Status: ✅ Production Ready (Phase 1-3 Complete)
+**Contributing**: Fork, create a feature branch, and submit a pull request
 
-**Implemented Features:**
-- 35+ MCP tools covering all major OmniFocus workflows
-- 37 JXA automation scripts with comprehensive error handling
-- High-performance caching layer with intelligent invalidation
-- Advanced search, filtering, and pagination
-- Bulk operations with transaction support
-- Natural language date parsing and task scheduling
-- Comprehensive connection diagnostics
-- Production-ready error handling and logging
-
-**Quality Assurance:**
-- ✅ **Architecture Review Complete** - All components verified production-ready
-- ✅ **JXA Script Audit Complete** - All 37 scripts follow proper OmniFocus API patterns
-- ✅ **Performance Optimized** - 45s timeout, pagination, caching, and retry logic
-- ✅ **Security Validated** - No hardcoded credentials, proper input validation
-- ✅ **Error Recovery** - Graceful degradation for OmniFocus 4 API limitations
-
-## Support
-
-- **Issues**: [GitHub Issues](https://github.com/your-username/focus-pocus/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-username/focus-pocus/discussions)
-- **Documentation**: [Project Wiki](https://github.com/your-username/focus-pocus/wiki)
+**Support**: 
+- [GitHub Issues](https://github.com/your-username/focus-pocus/issues) for bugs
+- [GitHub Discussions](https://github.com/your-username/focus-pocus/discussions) for questions  
+- [Local Deployment Guide](docs/local-deployment.md) for detailed help
 
 ---
 
-Built with ❤️ for the OmniFocus and AI community.
-
-## License
-
-ISC
+Built with ❤️ for the OmniFocus and AI community • **License**: ISC

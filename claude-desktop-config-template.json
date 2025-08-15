@@ -1,0 +1,50 @@
+{
+  "mcpServers": {
+    "focus-pocus": {
+      "command": "node",
+      "args": ["/ABSOLUTE/PATH/TO/focus-pocus/dist/index.js"],
+      "env": {
+        "LOG_LEVEL": "info",
+        "JXA_TIMEOUT": "45000",
+        "CACHE_MAX_SIZE": "500",
+        "CACHE_TTL": "120000",
+        "DEFAULT_LIMIT": "25",
+        "MAX_RETRIES": "3"
+      }
+    }
+  }
+}
+
+// CONFIGURATION INSTRUCTIONS:
+//
+// 1. REQUIRED: Replace "/ABSOLUTE/PATH/TO/focus-pocus" with your actual installation path
+//    To get your path, run: cd focus-pocus && pwd
+//    Example: "/Users/johndoe/Documents/focus-pocus/dist/index.js"
+//
+// 2. LOCATION: Save this file to:
+//    ~/Library/Application Support/Claude/claude_desktop_config.json
+//
+// 3. CONFIGURATION OPTIONS:
+//    - LOG_LEVEL: "debug|info|warn|error" (default: "info")
+//    - JXA_TIMEOUT: Timeout for OmniFocus operations in ms (default: 45000)
+//    - CACHE_MAX_SIZE: Maximum number of cached items (default: 500)
+//    - CACHE_TTL: Cache time-to-live in ms (default: 120000)
+//    - DEFAULT_LIMIT: Default pagination limit (default: 25)
+//    - MAX_RETRIES: Retry attempts for failed operations (default: 3)
+//
+// 4. PERFORMANCE TUNING:
+//    For large OmniFocus databases (1000+ tasks):
+//    - Increase JXA_TIMEOUT to "60000" or higher
+//    - Increase CACHE_TTL to "300000" for better performance
+//    - Decrease DEFAULT_LIMIT to "10" for faster individual queries
+//
+//    For systems with limited memory:
+//    - Decrease CACHE_MAX_SIZE to "100"
+//    - Decrease DEFAULT_LIMIT to "15"
+//
+// 5. DEBUGGING:
+//    For troubleshooting, temporarily set:
+//    - LOG_LEVEL: "debug"
+//    - Add: "ENABLE_CACHE_LOGGING": "true"
+//
+// 6. RESTART: After making changes, restart Claude Desktop completely
