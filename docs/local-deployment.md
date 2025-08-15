@@ -9,17 +9,20 @@ Focus Pocus is a production-ready MCP (Model Context Protocol) server that conne
 ## System Requirements
 
 ### Hardware Requirements
+
 - **Mac with Apple Silicon or Intel processor** (2019 or newer recommended)
 - **4GB RAM minimum** (8GB+ recommended for large OmniFocus databases)
 - **100MB available disk space** (for installation and cache)
 
 ### Software Requirements
+
 - **macOS 10.15 (Catalina) or later** (macOS 12+ recommended)
 - **OmniFocus 4** (Standard or Pro edition)
-- **Node.js 18.0 or later** 
+- **Node.js 18.0 or later**
 - **Claude Desktop** (latest version)
 
 ### Optional Requirements
+
 - **Homebrew** (recommended for Node.js installation)
 - **Git** (for cloning from source)
 
@@ -37,7 +40,7 @@ ls /Applications/ | grep -i omnifocus
 # Check Node.js version (should be 18+)
 node --version
 
-# Check if Claude Desktop is installed  
+# Check if Claude Desktop is installed
 ls /Applications/ | grep -i claude
 ```
 
@@ -46,12 +49,14 @@ ls /Applications/ | grep -i claude
 ### Install Node.js (if needed)
 
 **Option A: Download from nodejs.org (Recommended)**
+
 1. Visit [nodejs.org](https://nodejs.org/)
 2. Download the LTS version (18.x or later)
 3. Run the installer and follow the prompts
 4. Verify installation: `node --version`
 
 **Option B: Install via Homebrew**
+
 ```bash
 # Install Homebrew if you don't have it:
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -83,7 +88,7 @@ open -a "OmniFocus 4"
 cd ~/Documents  # or wherever you prefer
 
 # Clone the repository
-git clone https://github.com/your-username/focus-pocus.git
+git clone https://github.com/drcdev/focus-pocus.git
 cd focus-pocus
 
 # Install dependencies
@@ -100,7 +105,7 @@ ls dist/  # Should contain index.js and omnifocus/ folder
 
 ```bash
 # Download latest release
-curl -L https://github.com/your-username/focus-pocus/releases/latest/download/focus-pocus.tar.gz -o focus-pocus.tar.gz
+curl -L https://github.com/drcdev/focus-pocus/releases/latest/download/focus-pocus.tar.gz -o focus-pocus.tar.gz
 
 # Extract
 tar -xzf focus-pocus.tar.gz
@@ -119,6 +124,7 @@ macOS requires explicit permission for applications to control other application
 ### Method 1: Automatic Permission Request (Recommended)
 
 1. **Test the server first** - this will trigger the permission request:
+
    ```bash
    cd focus-pocus
    node dist/index.js
@@ -134,10 +140,12 @@ macOS requires explicit permission for applications to control other application
 If the automatic method doesn't work:
 
 1. **Open System Preferences**:
+
    - Click the Apple menu → **System Preferences**
    - Click **Security & Privacy**
 
 2. **Navigate to Automation settings**:
+
    - Click the **Privacy** tab
    - In the left sidebar, click **Automation**
    - You may need to click the lock icon and enter your password
@@ -150,14 +158,17 @@ If the automatic method doesn't work:
 ### Troubleshooting Permissions
 
 **"Automation" option not visible**:
+
 - Update to macOS 10.14 or later
 - Try running the server first to trigger permission requests
 
 **Terminal app not listed**:
+
 - The app will appear after first attempting to use automation
 - Run `node dist/index.js` first, then check again
 
 **Permission denied after granting access**:
+
 - Restart your terminal application completely
 - Try running from a different terminal (Terminal.app vs iTerm2)
 
@@ -175,6 +186,7 @@ Claude Desktop stores its configuration in your user library:
 ### Create Configuration
 
 **If the file doesn't exist, create it:**
+
 ```bash
 # Create the directory if needed
 mkdir -p ~/Library/Application\ Support/Claude/
@@ -194,6 +206,7 @@ EOF
 ```
 
 **Get your absolute path:**
+
 ```bash
 # Run this in your focus-pocus directory:
 pwd
@@ -201,6 +214,7 @@ pwd
 ```
 
 **If the file already exists, add Focus Pocus to it:**
+
 ```bash
 # Edit the existing file:
 nano ~/Library/Application\ Support/Claude/claude_desktop_config.json
@@ -214,7 +228,7 @@ nano ~/Library/Application\ Support/Claude/claude_desktop_config.json
 {
   "mcpServers": {
     "focus-pocus": {
-      "command": "node", 
+      "command": "node",
       "args": ["/Users/yourusername/Documents/focus-pocus/dist/index.js"],
       "env": {
         "LOG_LEVEL": "info"
@@ -260,22 +274,28 @@ open -a Claude
 In Claude Desktop, try these commands:
 
 **1. Test Connection:**
+
 ```
 Can you diagnose my OmniFocus connection?
 ```
-*Expected: System status report showing successful connection*
+
+_Expected: System status report showing successful connection_
 
 **2. Test Basic Functionality:**
+
 ```
 Show me my current tasks in OmniFocus
 ```
-*Expected: List of your tasks with basic information*
+
+_Expected: List of your tasks with basic information_
 
 **3. Test Advanced Features:**
+
 ```
 Create a task called "Test MCP Integration" due tomorrow
 ```
-*Expected: Confirmation that the task was created*
+
+_Expected: Confirmation that the task was created_
 
 ### Verify the Test
 
@@ -321,6 +341,7 @@ For systems with limited RAM:
 ### Installation Problems
 
 **Build fails with "Cannot find module" errors:**
+
 ```bash
 # Clear npm cache and reinstall
 npm cache clean --force
@@ -330,6 +351,7 @@ npm run build
 ```
 
 **Permission errors during npm install:**
+
 ```bash
 # Fix npm permissions
 sudo chown -R $(whoami) ~/.npm
@@ -338,6 +360,7 @@ sudo chown -R $(whoami) ~/.npm
 ### Runtime Problems
 
 **"OmniFocus is not running" errors:**
+
 ```bash
 # Ensure OmniFocus is launched and ready
 open -a "OmniFocus 4"
@@ -346,11 +369,13 @@ sleep 5  # Wait for it to fully load
 ```
 
 **Connection timeouts on first run:**
+
 - This is normal for large databases
 - Subsequent runs will be faster due to caching
 - Wait up to 60 seconds for the first query
 
 **Claude Desktop doesn't detect the server:**
+
 ```bash
 # Validate your JSON configuration:
 python -c "import json; json.load(open('~/Library/Application Support/Claude/claude_desktop_config.json'.replace('~', '${HOME}')))" && echo "JSON is valid"
@@ -362,12 +387,14 @@ ls -la "/your/absolute/path/to/focus-pocus/dist/index.js"
 ### Performance Issues
 
 **Slow response times:**
+
 1. Check your OmniFocus database size
 2. Increase JXA_TIMEOUT in configuration
 3. Reduce DEFAULT_LIMIT for faster individual queries
 4. Use cache warming by running a few queries after startup
 
 **Memory usage too high:**
+
 1. Reduce CACHE_MAX_SIZE
 2. Restart the server periodically
 3. Close unused perspectives in OmniFocus
@@ -440,9 +467,9 @@ When reporting issues, please include:
 
 ### Community Support
 
-- **GitHub Issues**: [Project Issues](https://github.com/your-username/focus-pocus/issues)
-- **GitHub Discussions**: [Community Forum](https://github.com/your-username/focus-pocus/discussions)
-- **Documentation**: [Project Wiki](https://github.com/your-username/focus-pocus/wiki)
+- **GitHub Issues**: [Project Issues](https://github.com/drcdev/focus-pocus/issues)
+- **GitHub Discussions**: [Community Forum](https://github.com/drcdev/focus-pocus/discussions)
+- **Documentation**: [Project Wiki](https://github.com/drcdev/focus-pocus/wiki)
 
 ---
 
@@ -479,7 +506,7 @@ killall Claude && open -a Claude
 {
   "LOG_LEVEL": "info|debug|warn|error",
   "JXA_TIMEOUT": "45000",
-  "CACHE_MAX_SIZE": "500", 
+  "CACHE_MAX_SIZE": "500",
   "DEFAULT_LIMIT": "25"
 }
 ```

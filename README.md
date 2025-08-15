@@ -4,7 +4,7 @@ Connect Claude Desktop to OmniFocus with comprehensive task management, natural 
 
 ## What is Focus Pocus?
 
-Focus Pocus is a production-ready MCP (Model Context Protocol) server that enables Claude Desktop to interact with your OmniFocus tasks, projects, and workflows. Ask Claude to manage your tasks naturally: *"Create a task for tomorrow"*, *"Show me overdue items"*, or *"Schedule my remaining work optimally"*.
+Focus Pocus is a production-ready MCP (Model Context Protocol) server that enables Claude Desktop to interact with your OmniFocus tasks, projects, and workflows. Ask Claude to manage your tasks naturally: _"Create a task for tomorrow"_, _"Show me overdue items"_, or _"Schedule my remaining work optimally"_.
 
 ### Key Features
 
@@ -13,11 +13,11 @@ Focus Pocus is a production-ready MCP (Model Context Protocol) server that enabl
 ✅ **Bulk Operations** - Process multiple tasks efficiently  
 ✅ **Smart Scheduling** - Optimal task distribution and workload balancing  
 ✅ **Tag & Project Organization** - Full hierarchy support  
-✅ **Built-in Perspectives** - Access Inbox, Forecast, Flagged, and more  
+✅ **Built-in Perspectives** - Access Inbox, Forecast, Flagged, and more
 
 ## Requirements
 
-- **macOS 10.15+** 
+- **macOS 10.15+**
 - **OmniFocus** (any version)
 - **Node.js 18+**
 - **Claude Desktop**
@@ -28,7 +28,7 @@ Focus Pocus is a production-ready MCP (Model Context Protocol) server that enabl
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/your-username/focus-pocus.git
+git clone https://github.com/drcdev/focus-pocus.git
 cd focus-pocus
 
 # 2. Run the installation script
@@ -36,8 +36,9 @@ cd focus-pocus
 ```
 
 The script will:
+
 - ✅ Check all prerequisites
-- ✅ Install dependencies and build the project  
+- ✅ Install dependencies and build the project
 - ✅ Set up macOS automation permissions
 - ✅ Configure Claude Desktop automatically
 - ✅ Test the complete installation
@@ -48,7 +49,7 @@ If you prefer manual setup:
 
 ```bash
 # 1. Install and build
-git clone https://github.com/your-username/focus-pocus.git
+git clone https://github.com/drcdev/focus-pocus.git
 cd focus-pocus
 npm install && npm run build
 
@@ -68,7 +69,7 @@ npm install && npm run build
 # 4. Restart Claude Desktop
 ```
 
-> **Note**: Replace `your-username` with the actual repository owner and `/ABSOLUTE/PATH/TO/focus-pocus` with your installation path.
+> **Note**: Replace `drcdev` with the actual repository owner and `/ABSOLUTE/PATH/TO/focus-pocus` with your installation path.
 
 ## Quick Start
 
@@ -89,7 +90,7 @@ Create a task "Review project proposal" due tomorrow
 Show me all tasks in my "Work" project
 Mark the task "Buy groceries" as complete
 
-# Natural language dates  
+# Natural language dates
 Create a task "Team meeting" for next Monday at 10am
 Schedule "Finish report" for Friday afternoon
 
@@ -110,28 +111,32 @@ What's in my Forecast for today?
 Focus Pocus supports 35+ operations covering all aspects of OmniFocus management:
 
 ### Tasks & Projects
+
 - **Task Management**: Create, update, complete, delete, move tasks
-- **Project Operations**: Create projects, manage status, organize in folders  
+- **Project Operations**: Create projects, manage status, organize in folders
 - **Bulk Operations**: Create/update/delete multiple items efficiently
 - **Search & Filtering**: Find tasks by content, tags, dates, completion status
 
 ### Organization & Planning
+
 - **Tag Management**: Create, assign, remove tags with hierarchy support
 - **Date Handling**: Natural language parsing ("tomorrow", "next Friday at 2pm")
 - **Perspective Access**: View Inbox, Forecast, Flagged, Projects, and more
 - **Smart Scheduling**: Optimal task distribution with workload balancing
 
 ### Advanced Features
+
 - **Progressive Deadlines**: Intelligent deadline generation for projects
-- **Batch Processing**: Handle multiple operations atomically  
+- **Batch Processing**: Handle multiple operations atomically
 - **Connection Diagnostics**: Comprehensive system health checks
 - **Performance Optimization**: Caching and pagination for large databases
 
 ## Technical Details
 
 ### Architecture
+
 - **TypeScript MCP Server** - 3,800+ lines of production code
-- **JXA Integration** - 39 JavaScript for Automation scripts  
+- **JXA Integration** - 39 JavaScript for Automation scripts
 - **Caching Layer** - High-performance with intelligent invalidation
 - **35+ MCP Tools** - Complete OmniFocus API coverage
 
@@ -139,7 +144,7 @@ Focus Pocus supports 35+ operations covering all aspects of OmniFocus management
 
 ```bash
 # Essential commands
-npm run build         # Build for production  
+npm run build         # Build for production
 npm run typecheck     # Type checking
 npm test             # Run test suite
 node dist/index.js   # Run MCP server manually
@@ -194,6 +199,7 @@ Focus Pocus works great out of the box. For advanced users, customize via enviro
 ```
 
 **Performance Tips:**
+
 - **Large databases (1000+ tasks)**: Increase `JXA_TIMEOUT` to `60000`
 - **Limited memory**: Reduce `CACHE_MAX_SIZE` to `100`
 - **Debugging**: Set `LOG_LEVEL` to `debug`
@@ -203,12 +209,14 @@ Focus Pocus works great out of the box. For advanced users, customize via enviro
 **Current Status: ✅ Production Ready**
 
 Focus Pocus has completed Phase 1-3 development with:
+
 - ✅ **35+ MCP Tools** - Complete OmniFocus workflow coverage
-- ✅ **39 JXA Scripts** - Comprehensive automation with error handling  
+- ✅ **39 JXA Scripts** - Comprehensive automation with error handling
 - ✅ **Advanced Features** - Natural language dates, smart scheduling, bulk operations
 - ✅ **Production Optimization** - Caching, pagination, graceful error recovery
 
 **Upcoming Features:**
+
 - 🚀 **Project Templates** - Intelligent project scaffolding
 - 📊 **Basic Analytics** - Task completion insights and reporting
 - 🔧 **Enhanced Performance** - Further optimization for large databases
@@ -217,9 +225,10 @@ Focus Pocus has completed Phase 1-3 development with:
 
 **Contributing**: Fork, create a feature branch, and submit a pull request
 
-**Support**: 
-- [GitHub Issues](https://github.com/your-username/focus-pocus/issues) for bugs
-- [GitHub Discussions](https://github.com/your-username/focus-pocus/discussions) for questions  
+**Support**:
+
+- [GitHub Issues](https://github.com/drcdev/focus-pocus/issues) for bugs
+- [GitHub Discussions](https://github.com/drcdev/focus-pocus/discussions) for questions
 - [Local Deployment Guide](docs/local-deployment.md) for detailed help
 
 ---

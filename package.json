@@ -31,16 +31,18 @@
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/focus-pocus.git"
+    "url": "https://github.com/drcdev/focus-pocus.git"
   },
   "bugs": {
-    "url": "https://github.com/your-username/focus-pocus/issues"
+    "url": "https://github.com/drcdev/focus-pocus/issues"
   },
-  "homepage": "https://github.com/your-username/focus-pocus#readme",
+  "homepage": "https://github.com/drcdev/focus-pocus#readme",
   "engines": {
     "node": ">=18.0.0"
   },
-  "os": ["darwin"],
+  "os": [
+    "darwin"
+  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.2",
     "date-fns": "^3.6.0",
