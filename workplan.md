@@ -4,17 +4,19 @@
 
 Build a Model Context Protocol (MCP) server for OmniFocus 4 that enables AI assistants to interact with task management data, including intelligent project scaffolding with progressive deadline generation.
 
-## 🚀 **Current Status: Phase 2 Complete** 
+## 🚀 **Current Status: Phase 2 Complete**
 
-### ✅ **PHASE 1 & 2 COMPLETED** 
+### ✅ **PHASE 1 & 2 COMPLETED**
+
 - **Foundation & Infrastructure** ✅ Complete
-- **CRUD Operations & Task Management** ✅ Complete  
+- **CRUD Operations & Task Management** ✅ Complete
 - **Advanced Features Beyond Requirements** ✅ Delivered
 
 ### 📊 **Implementation Results:**
+
 - ✅ **20+ MCP Tools** with full CRUD operations
 - ✅ **Natural Language Date Parsing** ("tomorrow at 2pm", "next Monday")
-- ✅ **Smart Scheduling & Workload Balancing** 
+- ✅ **Smart Scheduling & Workload Balancing**
 - ✅ **Hierarchical Tags & Legacy Context Support**
 - ✅ **Bulk Operations** (create, update, delete, schedule)
 - ✅ **Progressive Deadline Generation**
@@ -184,9 +186,9 @@ Build a Model Context Protocol (MCP) server for OmniFocus 4 that enables AI assi
   ```
 
 - [x] Implement folder management ✅
-  ✅ createFolder() for organization
-  ✅ moveProject() between folders
-  ✅ getFolderHierarchy() for structure visualization
+      ✅ createFolder() for organization
+      ✅ moveProject() between folders
+      ✅ getFolderHierarchy() for structure visualization
 
 ### 2.3 Tag and Context System ✅
 
@@ -203,10 +205,10 @@ Build a Model Context Protocol (MCP) server for OmniFocus 4 that enables AI assi
   ```
 
 - [x] Add context support (if available) ✅
-  ✅ Map legacy contexts to tags
-  ✅ Provide context-based filtering
-  ✅ Support location-based contexts
-  ✅ mapContextsToTags() for migration
+      ✅ Map legacy contexts to tags
+      ✅ Provide context-based filtering
+      ✅ Support location-based contexts
+      ✅ mapContextsToTags() for migration
 
 ### 2.4 Date and Scheduling ✅
 
@@ -223,12 +225,12 @@ Build a Model Context Protocol (MCP) server for OmniFocus 4 that enables AI assi
   ```
 
 - [x] Create scheduling utilities ✅
-  ✅ setDueDate() with time support
-  ✅ setDeferDate() for future visibility
-  ✅ calculateNextOccurrence() for repeating tasks
-  ✅ adjustDatesInBulk() for rescheduling
-  ✅ scheduleTasksOptimally() with workload balancing
-  ✅ generateProgressiveDeadlines() for projects
+      ✅ setDueDate() with time support
+      ✅ setDeferDate() for future visibility
+      ✅ calculateNextOccurrence() for repeating tasks
+      ✅ adjustDatesInBulk() for rescheduling
+      ✅ scheduleTasksOptimally() with workload balancing
+      ✅ generateProgressiveDeadlines() for projects
 
 ### 2.5 MCP Tool Registration ✅
 
@@ -244,6 +246,7 @@ Build a Model Context Protocol (MCP) server for OmniFocus 4 that enables AI assi
   ```
 
 **Phase 2 Results:**
+
 - ✅ **All Requirements Completed**
 - ✅ **92% Test Success Rate** (93/101 tests passing)
 - ✅ **TypeScript Compilation Clean**
@@ -723,9 +726,9 @@ Build a Model Context Protocol (MCP) server for OmniFocus 4 that enables AI assi
   ```json
   {
     "mcpServers": {
-      "omnifocus": {
+      "focus-pocus": {
         "command": "node",
-        "args": ["path/to/omnifocus-mcp/dist/index.js"],
+        "args": ["path/to/focus-pocus/dist/index.js"],
         "env": {}
       }
     }
@@ -795,7 +798,7 @@ Build a Model Context Protocol (MCP) server for OmniFocus 4 that enables AI assi
 ### Phase 1-2 Completion Criteria ✅ **ACHIEVED**
 
 - ✅ Basic CRUD operations working
-- ✅ Successfully connects to OmniFocus  
+- ✅ Successfully connects to OmniFocus
 - ✅ Can retrieve and create tasks
 - ✅ Claude Desktop integration functional
 - ✅ **PHASE 2 BONUS ACHIEVEMENTS:**

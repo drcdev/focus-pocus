@@ -4,11 +4,17 @@
   // Utility function for safe property access - eliminates redundant try-catch blocks
   function safeGet(obj, prop, defaultValue = null) {
     try {
-      // Direct property access is faster and more reliable in OmniFocus 4
-      const value = obj[prop];
+      // OmniFocus 4 requires function call syntax for property access
+      const value = obj[prop]();
       return value !== undefined ? value : defaultValue;
     } catch (e) {
-      return defaultValue;
+      // Fallback to direct property access for compatibility
+      try {
+        const directValue = obj[prop];
+        return directValue !== undefined ? directValue : defaultValue;
+      } catch (e2) {
+        return defaultValue;
+      }
     }
   }
   
@@ -64,108 +70,146 @@
       lastUpdated: new Date().toISOString()
     };
     
-    // Count tasks with error handling
+    // Get task statistics more efficiently - avoid full iteration
     try {
       const allTasks = safeGet(doc, 'flattenedTasks');
       if (allTasks) {
-        databaseInfo.statistics.tasks.total = allTasks.length;
-      
-      let availableCount = 0, completedCount = 0, droppedCount = 0, blockedCount = 0, flaggedCount = 0;
-      
-      for (let i = 0; i < allTasks.length; i++) {
+        // Only get total count - avoid expensive iterations
         try {
-          const task = allTasks[i];
+          databaseInfo.statistics.tasks.total = allTasks.length;
+        } catch (e) {
+          // If .length fails, estimate by sampling first 100 tasks
+          let sampleCount = 0;
+          for (let i = 0; i < 100; i++) {
+            try {
+              if (allTasks[i]) sampleCount++;
+              else break;
+            } catch (e) {
+              break;
+            }
+          }
+          databaseInfo.statistics.tasks.total = sampleCount > 0 ? `~${sampleCount * 10}+` : 'Unknown';
+        }
+        
+        // For detailed statistics, use efficient filtering instead of full iteration
+        // This limits the performance impact
+        try {
+          // Sample only first 500 tasks for statistics to avoid timeout
+          let sampleSize = Math.min(500, databaseInfo.statistics.tasks.total || 500);
+          let availableCount = 0, completedCount = 0, flaggedCount = 0;
+          let processed = 0;
           
-          // Check completion status
-          if (safeGet(task, 'completed', false)) {
-            completedCount++;
-          } else if (safeGet(task, 'dropped', false)) {
-            droppedCount++;
-          } else if (safeGet(task, 'blocked', false)) {
-            blockedCount++;
-          } else {
-            availableCount++;
+          for (let i = 0; i < sampleSize && processed < 500; i++) {
+            try {
+              const task = allTasks[i];
+              if (!task) break;
+              
+              processed++;
+              
+              if (safeGet(task, 'completed', false)) {
+                completedCount++;
+              } else {
+                availableCount++;
+              }
+              
+              if (safeGet(task, 'flagged', false)) {
+                flaggedCount++;
+              }
+            } catch (e) {
+              continue;
+            }
           }
           
-          // Check flagged status
-          if (safeGet(task, 'flagged', false)) {
-            flaggedCount++;
+          // Estimate based on sample if we have a large database
+          const scaleFactor = processed > 0 ? (databaseInfo.statistics.tasks.total / processed) : 1;
+          databaseInfo.statistics.tasks.available = Math.round(availableCount * scaleFactor);
+          databaseInfo.statistics.tasks.completed = Math.round(completedCount * scaleFactor);
+          databaseInfo.statistics.tasks.flagged = Math.round(flaggedCount * scaleFactor);
+          
+          if (processed < databaseInfo.statistics.tasks.total) {
+            databaseInfo.note = 'Statistics estimated from sample for performance';
           }
         } catch (e) {
-          // Skip tasks that can't be accessed
-          continue;
+          // Leave detailed stats at 0 if sampling fails
         }
-      }
-      
-        databaseInfo.statistics.tasks.available = availableCount;
-        databaseInfo.statistics.tasks.completed = completedCount;
-        databaseInfo.statistics.tasks.dropped = droppedCount;
-        databaseInfo.statistics.tasks.blocked = blockedCount;
-        databaseInfo.statistics.tasks.flagged = flaggedCount;
       }
     } catch (e) {
       // If task counting fails, leave at 0
     }
     
-    // Count projects with error handling
+    // Get project statistics efficiently
     try {
       const allProjects = safeGet(doc, 'flattenedProjects');
       if (allProjects) {
-        databaseInfo.statistics.projects.total = allProjects.length;
-      
-      let activeCount = 0, onHoldCount = 0, completedCount = 0, droppedCount = 0, flaggedCount = 0;
-      
-      for (let i = 0; i < allProjects.length; i++) {
         try {
-          const project = allProjects[i];
-          
-          // Check project status
-          const status = safeGet(project, 'status', 'active');
-          if (status === 'active') {
-            activeCount++;
-          } else if (status === 'on hold') {
-            onHoldCount++;
-          } else if (status === 'completed') {
-            completedCount++;
-          } else if (status === 'dropped') {
-            droppedCount++;
-          }
-          
-          // Check flagged status
-          if (safeGet(project, 'flagged', false)) {
-            flaggedCount++;
-          }
+          databaseInfo.statistics.projects.total = allProjects.length;
         } catch (e) {
-          // Skip projects that can't be accessed
-          continue;
+          databaseInfo.statistics.projects.total = 'Unknown';
         }
-      }
-      
-        databaseInfo.statistics.projects.active = activeCount;
-        databaseInfo.statistics.projects.onHold = onHoldCount;
-        databaseInfo.statistics.projects.completed = completedCount;
-        databaseInfo.statistics.projects.dropped = droppedCount;
-        databaseInfo.statistics.projects.flagged = flaggedCount;
+        
+        // Sample projects for detailed statistics to avoid timeout
+        try {
+          let sampleSize = Math.min(100, databaseInfo.statistics.projects.total || 100);
+          let activeCount = 0, completedCount = 0, flaggedCount = 0;
+          let processed = 0;
+          
+          for (let i = 0; i < sampleSize && processed < 100; i++) {
+            try {
+              const project = allProjects[i];
+              if (!project) break;
+              
+              processed++;
+              
+              const status = safeGet(project, 'status', 'active');
+              if (status.includes('active')) {
+                activeCount++;
+              } else if (status.includes('completed') || status.includes('done')) {
+                completedCount++;
+              }
+              
+              if (safeGet(project, 'flagged', false)) {
+                flaggedCount++;
+              }
+            } catch (e) {
+              continue;
+            }
+          }
+          
+          // Estimate if needed
+          const scaleFactor = processed > 0 ? (databaseInfo.statistics.projects.total / processed) : 1;
+          databaseInfo.statistics.projects.active = Math.round(activeCount * scaleFactor);
+          databaseInfo.statistics.projects.completed = Math.round(completedCount * scaleFactor);
+          databaseInfo.statistics.projects.flagged = Math.round(flaggedCount * scaleFactor);
+        } catch (e) {
+          // Leave detailed stats at 0 if sampling fails
+        }
       }
     } catch (e) {
       // If project counting fails, leave at 0
     }
     
-    // Count tags with error handling
+    // Get tag and folder counts efficiently
     try {
       const allTags = safeGet(doc, 'flattenedTags');
       if (allTags) {
-        databaseInfo.statistics.tags.total = allTags.length;
+        try {
+          databaseInfo.statistics.tags.total = allTags.length;
+        } catch (e) {
+          databaseInfo.statistics.tags.total = 'Unknown';
+        }
       }
     } catch (e) {
       // If tag counting fails, leave at 0
     }
     
-    // Count folders with error handling
     try {
       const allFolders = safeGet(doc, 'flattenedFolders');
       if (allFolders) {
-        databaseInfo.statistics.folders.total = allFolders.length;
+        try {
+          databaseInfo.statistics.folders.total = allFolders.length;
+        } catch (e) {
+          databaseInfo.statistics.folders.total = 'Unknown';
+        }
       }
     } catch (e) {
       // If folder counting fails, leave at 0

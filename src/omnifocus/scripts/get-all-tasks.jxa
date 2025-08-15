@@ -47,22 +47,37 @@
     const tasks = [];
     let processedCount = 0;
     let addedCount = 0;
+    let totalCount = 0;
     
-    for (let i = 0; i < flattenedTasks.length && addedCount < limit; i++) {
-      const task = flattenedTasks[i];
-      
+    // Use efficient iteration - don't access .length property which is expensive
+    // Instead, iterate through collection and stop when we have enough
+    for (let i = 0; addedCount < limit && i < 10000; i++) { // Safety limit to prevent infinite loops
+      let task;
       try {
+        task = flattenedTasks[i];
+        if (!task) break; // End of collection reached
+        
+        // Count total tasks we've seen
+        totalCount++;
+        
         // Skip completed tasks if not requested
         if (!includeCompleted) {
           const isCompleted = safeGet(task, 'completed', false);
           if (isCompleted) continue;
         }
         
-        // Apply offset
+        // Apply offset - skip tasks until we reach the desired offset
         if (processedCount < offset) {
           processedCount++;
           continue;
         }
+        
+      } catch (e) {
+        // End of collection or access error
+        break;
+      }
+      
+      try {
         
         // Build minimal task data for performance - using utility functions
         const taskData = {
@@ -107,14 +122,18 @@
       }
     }
     
+    // For pagination info, we can't efficiently determine total without expensive operations
+    // So we indicate hasMore based on whether we reached our limit
+    const hasMore = addedCount === limit;
+    
     return JSON.stringify({
       tasks: tasks,
       pagination: {
-        total: flattenedTasks.length,
         offset: offset,
         limit: limit,
         returned: tasks.length,
-        hasMore: (offset + tasks.length) < flattenedTasks.length
+        hasMore: hasMore,
+        note: "Total count omitted for performance - use hasMore for pagination"
       }
     });
     

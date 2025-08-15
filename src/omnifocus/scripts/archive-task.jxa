@@ -4,11 +4,17 @@
   // Utility function for safe property access - eliminates redundant try-catch blocks
   function safeGet(obj, prop, defaultValue = null) {
     try {
-      // Direct property access is faster and more reliable in OmniFocus 4
-      const value = obj[prop];
+      // OmniFocus 4 requires function call syntax for property access
+      const value = obj[prop]();
       return value !== undefined ? value : defaultValue;
     } catch (e) {
-      return defaultValue;
+      // Fallback to direct property access for compatibility
+      try {
+        const directValue = obj[prop];
+        return directValue !== undefined ? directValue : defaultValue;
+      } catch (e2) {
+        return defaultValue;
+      }
     }
   }
   
@@ -41,7 +47,7 @@
     let task = null;
     try {
       task = doc.flattenedTasks.byId(taskId);
-      if (!task || !task.id) {
+      if (!task || !safeGet(task, 'id')) {
         throw new Error('Task not found');
       }
     } catch (e) {
@@ -53,12 +59,16 @@
     }
     
     // Get task details before archiving with safe property access
-    let taskName = 'Unknown Task';
-    try { taskName = task.name; } catch (e) { taskName = 'Unknown Task'; }
+    const taskName = safeGet(task, 'name', 'Unknown Task');
     
-    // Archive by completing the task
-    task.completed = true;
-    task.completionDate = new Date();
+    // Archive by completing the task using proper OmniFocus method
+    try {
+      task.markComplete(new Date());
+    } catch (e) {
+      // Fallback to direct property assignment
+      task.completed = true;
+      task.completionDate = new Date();
+    }
     
     // Get or create archive tag
     let archiveTag = doc.flattenedTags.whose({ name: 'Archive' })[0];
@@ -67,18 +77,23 @@
       doc.tags.push(archiveTag);
     }
     
-    // Add archive tag to task with safe property access
+    // Add archive tag to task using proper OmniFocus method
     try {
-      const currentTags = task.tags;
-      if (currentTags) {
-        const updatedTags = Array.from(currentTags);
-        updatedTags.push(archiveTag);
-        task.tags = updatedTags;
-      } else {
-        task.tags = [archiveTag];
-      }
+      app.add(archiveTag, { to: task.tags });
     } catch (e) {
-      // If tags can't be accessed, just complete the task
+      // Tag assignment might fail - try direct assignment as fallback
+      try {
+        const currentTags = safeGet(task, 'tags');
+        if (currentTags) {
+          const updatedTags = Array.from(currentTags);
+          updatedTags.push(archiveTag);
+          task.tags = updatedTags;
+        } else {
+          task.tags = [archiveTag];
+        }
+      } catch (e2) {
+        // If tags can't be accessed, just complete the task
+      }
     }
     
     return JSON.stringify({

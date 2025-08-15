@@ -4,11 +4,17 @@
   // Utility function for safe property access - eliminates redundant try-catch blocks
   function safeGet(obj, prop, defaultValue = null) {
     try {
-      // Direct property access is faster and more reliable in OmniFocus 4
-      const value = obj[prop];
+      // OmniFocus 4 requires function call syntax for property access
+      const value = obj[prop]();
       return value !== undefined ? value : defaultValue;
     } catch (e) {
-      return defaultValue;
+      // Fallback to direct property access for compatibility
+      try {
+        const directValue = obj[prop];
+        return directValue !== undefined ? directValue : defaultValue;
+      } catch (e2) {
+        return defaultValue;
+      }
     }
   }
   
@@ -44,7 +50,17 @@
     // Get tasks if requested
     if (itemType === 'all' || itemType === 'tasks') {
       try {
-        const tasks = doc.flattenedTasks.whose({ tags: { _contains: tag } });
+        // Use filter() method with includes() as per OmniFocus documentation
+        const allTasks = doc.flattenedTasks();
+        const tasks = allTasks.filter(task => {
+          try {
+            const taskTags = task.tags();
+            return taskTags && taskTags.includes(tag);
+          } catch (e) {
+            return false;
+          }
+        });
+        
         for (let i = 0; i < tasks.length; i++) {
           const task = tasks[i];
           try {
@@ -63,7 +79,7 @@
             };
             
             // Get project ID safely
-            const container = safeGet(task, 'assignedContainer');
+            const container = safeGet(task, 'containingProject');
             if (container) {
               taskData.projectId = safeGet(container, 'id');
             }
@@ -93,7 +109,17 @@
     // Get projects if requested
     if (itemType === 'all' || itemType === 'projects') {
       try {
-        const projects = doc.flattenedProjects.whose({ tags: { _contains: tag } });
+        // Use filter() method with includes() as per OmniFocus documentation
+        const allProjects = doc.flattenedProjects();
+        const projects = allProjects.filter(project => {
+          try {
+            const projectTags = project.tags();
+            return projectTags && projectTags.includes(tag);
+          } catch (e) {
+            return false;
+          }
+        });
+        
         for (let i = 0; i < projects.length; i++) {
           const project = projects[i];
           try {

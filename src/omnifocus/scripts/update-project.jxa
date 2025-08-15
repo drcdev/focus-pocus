@@ -4,11 +4,17 @@
   // Utility function for safe property access - eliminates redundant try-catch blocks
   function safeGet(obj, prop, defaultValue = null) {
     try {
-      // Direct property access is faster and more reliable in OmniFocus 4
-      const value = obj[prop];
+      // OmniFocus 4 requires function call syntax for property access
+      const value = obj[prop]();
       return value !== undefined ? value : defaultValue;
     } catch (e) {
-      return defaultValue;
+      // Fallback to direct property access for compatibility
+      try {
+        const directValue = obj[prop];
+        return directValue !== undefined ? directValue : defaultValue;
+      } catch (e2) {
+        return defaultValue;
+      }
     }
   }
   
@@ -127,67 +133,48 @@
       tags: []
     };
     
-    // Use try-catch for each property to handle conversion errors
-    try { result.id = project.id; } catch (e) { result.id = null; }
-    try { result.name = project.name; } catch (e) { result.name = 'Unknown Project'; }
-    try { result.note = project.note || ''; } catch (e) { result.note = ''; }
-    try { result.status = project.status; } catch (e) { result.status = null; }
-    try { result.flagged = project.flagged; } catch (e) { result.flagged = false; }
-    try { result.dueDate = project.dueDate ? project.dueDate.toISOString() : null; } catch (e) { result.dueDate = null; }
-    try { result.deferDate = project.deferDate ? project.deferDate.toISOString() : null; } catch (e) { result.deferDate = null; }
-    try { result.completionDate = project.completionDate ? project.completionDate.toISOString() : null; } catch (e) { result.completionDate = null; }
-    try { result.sequential = project.sequential; } catch (e) { result.sequential = false; }
-    try { result.estimatedMinutes = project.estimatedMinutes || null; } catch (e) { result.estimatedMinutes = null; }
+    // Use safeGet for reliable property access
+    result.id = safeGet(project, 'id');
+    result.name = safeGet(project, 'name', 'Unknown Project');
+    result.note = safeGet(project, 'note', '');
+    result.status = safeGet(project, 'status');
+    result.flagged = safeGet(project, 'flagged', false);
+    result.dueDate = safeDate(safeGet(project, 'dueDate'));
+    result.deferDate = safeDate(safeGet(project, 'deferDate'));
+    result.completionDate = safeDate(safeGet(project, 'completionDate'));
+    result.sequential = safeGet(project, 'sequential', false);
+    result.estimatedMinutes = safeGet(project, 'estimatedMinutes');
     
     // Get folder ID safely
-    try {
-      const container = project.container;
-      if (container && container.class === 'folder') {
-        try { result.folderId = container.id; } catch (e) { }
-      }
-    } catch (e) {
-      // Container might not exist
+    const container = safeGet(project, 'container');
+    if (container && safeGet(container, 'class') === 'folder') {
+      result.folderId = safeGet(container, 'id');
     }
     
     // Get task counts safely
-    try {
-      const tasks = project.tasks;
-      if (tasks) {
-        result.taskCount = tasks.length;
-      }
-    } catch (e) {
-      // Task count might fail
+    const tasks = safeGet(project, 'tasks');
+    if (tasks) {
+      result.taskCount = tasks.length || 0;
     }
     
-    try {
-      const availableTasks = project.availableTasks;
-      if (availableTasks) {
-        result.availableTaskCount = availableTasks.length;
-      }
-    } catch (e) {
-      // Available task count might fail
+    const availableTasks = safeGet(project, 'availableTasks');
+    if (availableTasks) {
+      result.availableTaskCount = availableTasks.length || 0;
     }
     
     // Get tags safely
-    try {
-      const projectTags = project.tags;
-      if (projectTags && projectTags.length > 0) {
-        for (let i = 0; i < projectTags.length; i++) {
-          try {
-            const tag = projectTags[i];
-            const tagData = {};
-            try { tagData.id = tag.id; } catch (e) { tagData.id = null; }
-            try { tagData.name = tag.name; } catch (e) { tagData.name = 'Unknown Tag'; }
-            if (tagData.id || tagData.name !== 'Unknown Tag') {
-              result.tags.push(tagData);
-            }
-          } catch (e) {
-            // Skip this tag if conversion fails
-          }
+    const projectTags = safeGet(project, 'tags');
+    if (projectTags && projectTags.length > 0) {
+      for (let i = 0; i < projectTags.length; i++) {
+        const tag = projectTags[i];
+        const tagData = {
+          id: safeGet(tag, 'id'),
+          name: safeGet(tag, 'name', 'Unknown Tag')
+        };
+        if (tagData.id || tagData.name !== 'Unknown Tag') {
+          result.tags.push(tagData);
         }
       }
-    } catch (e) {
-      // Tags might fail to load
     }
     
     return JSON.stringify(result);

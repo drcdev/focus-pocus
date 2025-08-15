@@ -4,11 +4,17 @@
   // Utility function for safe property access - eliminates redundant try-catch blocks
   function safeGet(obj, prop, defaultValue = null) {
     try {
-      // Direct property access is faster and more reliable in OmniFocus 4
-      const value = obj[prop];
+      // OmniFocus 4 requires function call syntax for property access
+      const value = obj[prop]();
       return value !== undefined ? value : defaultValue;
     } catch (e) {
-      return defaultValue;
+      // Fallback to direct property access for compatibility
+      try {
+        const directValue = obj[prop];
+        return directValue !== undefined ? directValue : defaultValue;
+      } catch (e2) {
+        return defaultValue;
+      }
     }
   }
   
@@ -71,8 +77,41 @@
     
     // Move the task
     if (targetProjectId === null) {
-      // Move to inbox
-      task.assignedContainer = null;
+      // Move to inbox - recreate as inbox task
+      try {
+        const taskProps = {
+          name: task.name(),
+          note: task.note() || '',
+          flagged: task.flagged(),
+          completed: task.completed()
+        };
+        
+        // Copy optional properties if they exist
+        try { if (task.dueDate()) taskProps.dueDate = task.dueDate(); } catch (e) {}
+        try { if (task.deferDate()) taskProps.deferDate = task.deferDate(); } catch (e) {}
+        try { if (task.estimatedMinutes()) taskProps.estimatedMinutes = task.estimatedMinutes(); } catch (e) {}
+        try { if (task.completionDate()) taskProps.completionDate = task.completionDate(); } catch (e) {}
+        
+        // Create new inbox task
+        const newTask = app.InboxTask(taskProps);
+        doc.inboxTasks.push(newTask);
+        
+        // Copy tags
+        try {
+          const taskTags = task.tags();
+          if (taskTags && taskTags.length > 0) {
+            app.add(taskTags, { to: newTask.tags });
+          }
+        } catch (e) {}
+        
+        // Delete original task
+        task.delete();
+        
+        // Update task reference for return data
+        task = newTask;
+      } catch (e) {
+        throw new Error(`Failed to move task to inbox: ${e.message}`);
+      }
     } else {
       // Move to specific project - with retry for newly created projects
       let targetProject = null;
@@ -125,44 +164,38 @@
       }
       
       try {
-        // Check if task is currently in inbox
-        const isInboxTask = task.inInbox ? task.inInbox() : false;
+        // For all task moves, use the recreate and delete pattern
+        // This is the most reliable approach in OmniFocus
+        const taskProps = {
+          name: task.name(),
+          note: task.note() || '',
+          flagged: task.flagged(),
+          completed: task.completed()
+        };
         
-        if (isInboxTask) {
-          // For inbox tasks, we need to recreate as project task
-          const taskProps = {
-            name: task.name(),
-            note: task.note() || '',
-            flagged: task.flagged(),
-            completed: task.completed()
-          };
-          
-          // Copy optional properties if they exist
-          try { if (task.dueDate()) taskProps.dueDate = task.dueDate(); } catch (e) {}
-          try { if (task.deferDate()) taskProps.deferDate = task.deferDate(); } catch (e) {}
-          try { if (task.estimatedMinutes()) taskProps.estimatedMinutes = task.estimatedMinutes(); } catch (e) {}
-          
-          // Create new task in project
-          const newTask = app.Task(taskProps);
-          targetProject.tasks.push(newTask);
-          
-          // Copy tags
-          try {
-            const taskTags = task.tags();
-            if (taskTags && taskTags.length > 0) {
-              app.add(taskTags, { to: newTask.tags });
-            }
-          } catch (e) {}
-          
-          // Delete original task
-          task.delete();
-          
-          // Update task reference for return data
-          task = newTask;
-        } else {
-          // For regular tasks, assignedContainer should work
-          task.assignedContainer = targetProject;
-        }
+        // Copy optional properties if they exist
+        try { if (task.dueDate()) taskProps.dueDate = task.dueDate(); } catch (e) {}
+        try { if (task.deferDate()) taskProps.deferDate = task.deferDate(); } catch (e) {}
+        try { if (task.estimatedMinutes()) taskProps.estimatedMinutes = task.estimatedMinutes(); } catch (e) {}
+        try { if (task.completionDate()) taskProps.completionDate = task.completionDate(); } catch (e) {}
+        
+        // Create new task in project
+        const newTask = app.Task(taskProps);
+        targetProject.tasks.push(newTask);
+        
+        // Copy tags
+        try {
+          const taskTags = task.tags();
+          if (taskTags && taskTags.length > 0) {
+            app.add(taskTags, { to: newTask.tags });
+          }
+        } catch (e) {}
+        
+        // Delete original task
+        task.delete();
+        
+        // Update task reference for return data
+        task = newTask;
       } catch (e) {
         return JSON.stringify({
           error: true,

@@ -4,11 +4,17 @@
   // Utility function for safe property access - eliminates redundant try-catch blocks
   function safeGet(obj, prop, defaultValue = null) {
     try {
-      // Direct property access is faster and more reliable in OmniFocus 4
-      const value = obj[prop];
+      // OmniFocus 4 requires function call syntax for property access
+      const value = obj[prop]();
       return value !== undefined ? value : defaultValue;
     } catch (e) {
-      return defaultValue;
+      // Fallback to direct property access for compatibility
+      try {
+        const directValue = obj[prop];
+        return directValue !== undefined ? directValue : defaultValue;
+      } catch (e2) {
+        return defaultValue;
+      }
     }
   }
   
@@ -65,7 +71,6 @@
           deferDate: safeDate(safeGet(task, 'deferDate')),
           estimatedMinutes: safeGet(task, 'estimatedMinutes'),
           flagged: safeGet(task, 'flagged', false),
-          repetitionRule: safeGet(task, 'repetitionRule') ? safeGet(task, 'repetitionRule').toString() : null,
           tags: [],
           projectId: null,
           parentTaskId: null,
